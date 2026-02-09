@@ -92,7 +92,7 @@ class EmptyEpsilonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step (HTTP connection)."""
         if user_input is None:
             return self.async_show_form(
-                step_id=STEP_HTTP,
+                step_id="user",
                 data_schema=HTTP_SCHEMA,
                 description_placeholders={
                     "warning": "The EE HTTP API has no built-in authentication. "
@@ -107,7 +107,7 @@ class EmptyEpsilonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
         if error:
             return self.async_show_form(
-                step_id=STEP_HTTP,
+                step_id="user",
                 data_schema=HTTP_SCHEMA,
                 errors={"base": error},
             )
@@ -121,7 +121,7 @@ class EmptyEpsilonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Optional SSH step for server management."""
         if user_input is None:
             return self.async_show_form(
-                step_id=STEP_SSH,
+                step_id="ssh",
                 data_schema=SSH_SCHEMA,
                 description_placeholders={
                     "optional": "Optional. Skip or leave SSH host empty to configure later."
