@@ -144,7 +144,7 @@ class EEAPIClient:
             f'PlayerSpaceship():setFaction("{f}"):setTemplate("{t}"):setCallSign("{c}"):setPosition({x},{y})'
         )
 
-    # --- Phase 2: Server-level and primary ship sensors ---
+Minor bug fixesService/    # --- Phase 2: Server-level and primary ship sensors ---
 
     async def get_active_scenario(self) -> str | None:
         """Return active scenario name or None."""

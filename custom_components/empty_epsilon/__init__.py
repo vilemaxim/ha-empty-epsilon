@@ -75,7 +75,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     )
 
     if not hass.data.get(DOMAIN + "_services"):
-        async_setup_services(hass)
+        await async_setup_services(hass)
         hass.data[DOMAIN + "_services"] = True
 
     return True
