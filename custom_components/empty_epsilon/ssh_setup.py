@@ -31,6 +31,11 @@ def generate_ssh_key() -> tuple[str, str]:
     key = asyncssh.generate_private_key("ssh-rsa", key_size=4096)
     private_key_data = key.export_private_key()
     public_key_data = key.export_public_key()
+    # asyncssh returns bytes for PEM format
+    if isinstance(private_key_data, bytes):
+        private_key_data = private_key_data.decode("utf-8")
+    if isinstance(public_key_data, bytes):
+        public_key_data = public_key_data.decode("utf-8")
 
     Path(EE_KEY_PATH).write_text(private_key_data, encoding="utf-8")
     Path(EE_KEY_PATH).chmod(0o600)

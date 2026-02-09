@@ -76,7 +76,7 @@ class SSHManager:
         self._username = username
         self._password = password or ""
         self._key_filename = key_filename.strip() if key_filename else None
-        self._known_hosts = known_hosts.strip() or None
+        self._known_hosts = (known_hosts.strip() or None) if known_hosts else None
         self._skip_host_key_check = skip_host_key_check
         self._conn: Any = None
 
