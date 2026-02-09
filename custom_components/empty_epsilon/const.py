@@ -76,3 +76,6 @@ GAME_STATUS_GAME_OVER_DEFEAT = "game_over_defeat"
 
 # HTTP API
 EE_EXEC_PATH = "/exec.lua"
+
+# Simplest built-in EE scenario for init start-server (proves we have full control)
+DEFAULT_INIT_SCENARIO = "scenario_jump_00.lua"

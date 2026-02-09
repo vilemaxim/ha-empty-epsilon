@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from typing import Any
 
 from homeassistant.core import HomeAssistant
@@ -40,7 +41,7 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=poll_interval,
+            update_interval=timedelta(seconds=poll_interval),
         )
         self._sacn: SACNListener | None = None
         universe = config.get(CONF_SACN_UNIVERSE, 2)

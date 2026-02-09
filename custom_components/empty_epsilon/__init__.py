@@ -2,21 +2,34 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import (
-    CONF_EE_HOST,
+    CONF_EE_INSTALL_PATH,
     CONF_EE_PORT,
     CONF_POLL_INTERVAL,
     CONF_SACN_UNIVERSE,
+    CONF_SSH_HOST,
+    CONF_SSH_KEY,
+    CONF_SSH_KNOWN_HOSTS,
+    CONF_SSH_PASSWORD,
+    CONF_SSH_PORT,
+    CONF_SSH_SKIP_HOST_KEY_CHECK,
+    CONF_SSH_USERNAME,
+    DEFAULT_INIT_SCENARIO,
     DOMAIN,
 )
 from .coordinator import EmptyEpsilonCoordinator
+from .ssh_manager import SSHManager
 
 _LOGGER = logging.getLogger(__name__)
+
+# Seconds to wait for EE to boot before first coordinator refresh
+EE_STARTUP_DELAY = 8
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
@@ -30,6 +43,23 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     options = config_entry.options or {}
     data[CONF_POLL_INTERVAL] = options.get(CONF_POLL_INTERVAL, 10)
     data[CONF_SACN_UNIVERSE] = options.get(CONF_SACN_UNIVERSE, 2)
+
+    # Start EE server via SSH before coordinator setup (proves we have full control)
+    ssh = SSHManager(
+        host=data[CONF_SSH_HOST],
+        port=data.get(CONF_SSH_PORT, 22),
+        username=data[CONF_SSH_USERNAME],
+        password=data.get(CONF_SSH_PASSWORD) or None,
+        key_filename=(data.get(CONF_SSH_KEY) or "").strip() or None,
+        known_hosts=data.get(CONF_SSH_KNOWN_HOSTS),
+        skip_host_key_check=data.get(CONF_SSH_SKIP_HOST_KEY_CHECK, True),
+    )
+    install_path = data.get(CONF_EE_INSTALL_PATH, "/opt/EmptyEpsilon")
+    ee_port = data.get(CONF_EE_PORT, 8080)
+    if await ssh.start_server(install_path, ee_port, DEFAULT_INIT_SCENARIO):
+        _LOGGER.info("Waiting %ds for EmptyEpsilon to boot", EE_STARTUP_DELAY)
+        await asyncio.sleep(EE_STARTUP_DELAY)
+    await ssh.disconnect()
 
     coordinator = EmptyEpsilonCoordinator(hass, data)
     await coordinator.async_config_entry_first_refresh()

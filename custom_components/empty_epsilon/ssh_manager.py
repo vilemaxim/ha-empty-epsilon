@@ -11,6 +11,7 @@ from typing import Any
 # Import deferred to connect() - asyncssh does blocking I/O on import
 
 from .const import (
+    DEFAULT_INIT_SCENARIO,
     DEFAULT_SACN_CHANNELS,
     DEFAULT_SACN_UNIVERSE,
     DEFAULT_RESEND_DELAY_MS,
@@ -179,6 +180,37 @@ class SSHManager:
             return False
         finally:
             Path(local_path).unlink(missing_ok=True)
+
+    async def start_server(
+        self,
+        ee_install_path: str,
+        ee_port: int,
+        scenario: str = DEFAULT_INIT_SCENARIO,
+    ) -> bool:
+        """
+        Start EmptyEpsilon headless with httpserver on the EE host via SSH.
+        Runs in background (nohup) so the SSH session returns immediately.
+        Returns True if the start command was sent successfully.
+        """
+        base = ee_install_path.rstrip("/")
+        # EE binary in install dir; headless + httpserver required for integration
+        cmd = (
+            f"cd {base} && nohup ./EmptyEpsilon headless "
+            f"httpserver={ee_port} scenario={scenario} "
+            f"> /dev/null 2>&1 &"
+        )
+        status, out, err = await self.run_command(cmd, timeout=15.0)
+        if status != 0:
+            _LOGGER.warning(
+                "Start server command failed (status=%s): %s %s",
+                status, out.strip(), err.strip(),
+            )
+            return False
+        _LOGGER.info(
+            "EmptyEpsilon start sent: %s (httpserver=%s)",
+            scenario, ee_port,
+        )
+        return True
 
     async def deploy_hardware_ini(
         self,
