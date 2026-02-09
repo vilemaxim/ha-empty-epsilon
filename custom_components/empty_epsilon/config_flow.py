@@ -172,11 +172,10 @@ class EmptyEpsilonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data_schema=vol.Schema({
                     vol.Required("proceed", default=True): bool,
                 }),
-                description=(
-                    f"Public key saved to:\n{EE_PUBKEY_PATH}\n\n"
-                    "Also at: http://YOUR_HA:8123/local/empty_epsilon/ee_ssh_public_key.pub\n\n"
-                    "Add to EE server: copy the key, then append to ~/.ssh/authorized_keys"
-                ),
+                description_placeholders={
+                    "pubkey_path": EE_PUBKEY_PATH,
+                    "web_path": "http://YOUR_HA:8123/local/empty_epsilon/ee_ssh_public_key.pub",
+                },
             )
         return await self.async_step_ssh()
 
