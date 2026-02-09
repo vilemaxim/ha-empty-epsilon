@@ -42,6 +42,9 @@
   },
   "entity": {
     "binary_sensor": {
+      "online": {
+        "name": "Online"
+      },
       "server_reachable": {
         "name": "Server reachable"
       },
@@ -50,11 +53,59 @@
       },
       "game_paused": {
         "name": "Game paused"
+      },
+      "shieldsUp": {
+        "name": "Shields up"
+      },
+      "docked": {
+        "name": "Docked"
+      },
+      "docking": {
+        "name": "Docking"
       }
     },
     "sensor": {
       "game_status": {
         "name": "Game status"
+      },
+      "active_scenario": {
+        "name": "Active scenario"
+      },
+      "total_objects": {
+        "name": "Total objects"
+      },
+      "enemy_ship_count": {
+        "name": "Enemy ships"
+      },
+      "friendly_station_count": {
+        "name": "Friendly stations"
+      },
+      "callsign": {
+        "name": "Callsign"
+      },
+      "ship_type": {
+        "name": "Ship type"
+      },
+      "sector": {
+        "name": "Sector"
+      },
+      "homing": {
+        "name": "Homing missiles"
+      },
+      "nuke": {
+        "name": "Nukes"
+      },
+      "emp": {
+        "name": "EMPs"
+      },
+      "mine": {
+        "name": "Mines"
+      },
+      "hvli": {
+        "name": "HVLIs"
+      },
+      "reputation": {
+        "name": "Reputation"
       }
     }
   }

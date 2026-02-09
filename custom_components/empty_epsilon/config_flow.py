@@ -33,7 +33,6 @@ from .const import (
     DOMAIN,
     EE_KEY_PATH,
     EE_KNOWN_HOSTS_PATH,
-    EE_PUBKEY_PATH,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -152,30 +151,18 @@ class EmptyEpsilonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_generate_key(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Generate SSH key and show instructions."""
-        if user_input is None:
-            # Generate key in executor (asyncssh blocks)
-            from .ssh_setup import generate_ssh_key
+        """Generate SSH key and continue to SSH credentials."""
+        from .ssh_setup import generate_ssh_key
 
-            try:
-                await self.hass.async_add_executor_job(generate_ssh_key)
-                self._generated_key_path = EE_KEY_PATH
-            except Exception as e:
-                _LOGGER.exception("Key generation failed: %s", e)
-                return self.async_show_form(
-                    step_id="user",
-                    data_schema=KEY_SCHEMA,
-                    errors={"base": "key_generation_failed"},
-                )
+        try:
+            await self.hass.async_add_executor_job(generate_ssh_key)
+            self._generated_key_path = EE_KEY_PATH
+        except Exception as e:
+            _LOGGER.exception("Key generation failed: %s", e)
             return self.async_show_form(
-                step_id="generate_key",
-                data_schema=vol.Schema({
-                    vol.Required("proceed", default=True): bool,
-                }),
-                description_placeholders={
-                    "pubkey_path": EE_PUBKEY_PATH,
-                    "web_path": "http://YOUR_HA:8123/local/empty_epsilon/ee_ssh_public_key.pub",
-                },
+                step_id="user",
+                data_schema=KEY_SCHEMA,
+                errors={"base": "key_generation_failed"},
             )
         return await self.async_step_ssh()
 

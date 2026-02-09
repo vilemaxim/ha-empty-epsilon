@@ -63,6 +63,83 @@ async def async_setup_entry(
             coordinator, entry_id, "scenario_time", "Scenario time"
         )
     )
+    entities.append(
+        EmptyEpsilonSensor(
+            coordinator, entry_id, "active_scenario", "Active scenario",
+            icon="mdi:file-document-outline"
+        )
+    )
+    entities.append(
+        EmptyEpsilonSensor(
+            coordinator, entry_id, "total_objects", "Total objects",
+            unit="objects", icon="mdi:counter", state_class=SensorStateClass.MEASUREMENT
+        )
+    )
+    entities.append(
+        EmptyEpsilonSensor(
+            coordinator, entry_id, "enemy_ship_count", "Enemy ships",
+            unit="ships", icon="mdi:target", state_class=SensorStateClass.MEASUREMENT
+        )
+    )
+    entities.append(
+        EmptyEpsilonSensor(
+            coordinator, entry_id, "friendly_station_count", "Friendly stations",
+            unit="stations", icon="mdi:domain", state_class=SensorStateClass.MEASUREMENT
+        )
+    )
+
+    # Primary ship from HTTP (callsign, type, sector, ammo)
+    entities.append(
+        EmptyEpsilonPrimaryShipSensor(
+            coordinator, entry_id, "callsign", "Callsign", icon="mdi:badge-account"
+        )
+    )
+    entities.append(
+        EmptyEpsilonPrimaryShipSensor(
+            coordinator, entry_id, "ship_type", "Ship type", icon="mdi:ship-wheel"
+        )
+    )
+    entities.append(
+        EmptyEpsilonPrimaryShipSensor(
+            coordinator, entry_id, "sector", "Sector", icon="mdi:map-marker"
+        )
+    )
+    entities.append(
+        EmptyEpsilonPrimaryShipSensor(
+            coordinator, entry_id, "homing", "Homing missiles",
+            numeric=True, icon="mdi:missile"
+        )
+    )
+    entities.append(
+        EmptyEpsilonPrimaryShipSensor(
+            coordinator, entry_id, "nuke", "Nukes",
+            numeric=True, icon="mdi:atom"
+        )
+    )
+    entities.append(
+        EmptyEpsilonPrimaryShipSensor(
+            coordinator, entry_id, "emp", "EMPs",
+            numeric=True, icon="mdi:flash"
+        )
+    )
+    entities.append(
+        EmptyEpsilonPrimaryShipSensor(
+            coordinator, entry_id, "mine", "Mines",
+            numeric=True, icon="mdi:land-mine-on"
+        )
+    )
+    entities.append(
+        EmptyEpsilonPrimaryShipSensor(
+            coordinator, entry_id, "hvli", "HVLIs",
+            numeric=True, icon="mdi:bullet"
+        )
+    )
+    entities.append(
+        EmptyEpsilonPrimaryShipSensor(
+            coordinator, entry_id, "reputation", "Reputation",
+            numeric=True, icon="mdi:star"
+        )
+    )
 
     # Primary ship from sACN (hull, shields, energy, impulse, warp)
     entities.append(
@@ -129,6 +206,81 @@ class EmptyEpsilonPlayerShipCountSensor(EmptyEpsilonEntity, SensorEntity):
     def native_value(self) -> int | None:
         count = self.coordinator.data.get("http", {}).get("player_ship_count")
         return int(count) if count is not None else 0
+
+
+class EmptyEpsilonSensor(EmptyEpsilonEntity, SensorEntity):
+    """Generic sensor reading from coordinator.data['http'][key]."""
+
+    def __init__(
+        self,
+        coordinator,
+        entry_id,
+        key: str,
+        name: str,
+        unit: str | None = None,
+        icon: str | None = None,
+        state_class: str | None = None,
+    ):
+        super().__init__(coordinator, entry_id, key, name, icon=icon)
+        self._unit = unit
+        self._key = key
+        self._state_class = state_class
+        self._attr_translation_key = key
+
+    @property
+    def native_value(self) -> str | int | float | None:
+        val = self.coordinator.data.get("http", {}).get(self._key)
+        if val is None:
+            return None
+        if isinstance(val, (int, float)):
+            return val
+        return str(val)
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        return self._unit
+
+    @property
+    def state_class(self) -> str | None:
+        return self._state_class
+
+
+class EmptyEpsilonPrimaryShipSensor(EmptyEpsilonEntity, SensorEntity):
+    """Sensor for primary ship data from coordinator.data['http']['primary_ship']."""
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(
+        self,
+        coordinator,
+        entry_id,
+        key: str,
+        name: str,
+        numeric: bool = False,
+        icon: str | None = None,
+    ):
+        super().__init__(coordinator, entry_id, key, name, icon=icon)
+        self._key = key
+        self._numeric = numeric
+        self._attr_translation_key = key
+
+    @property
+    def native_value(self) -> str | int | None:
+        ship = self.coordinator.data.get("http", {}).get("primary_ship") or {}
+        val = ship.get(self._key)
+        if val is None:
+            return None
+        if self._numeric:
+            return int(val) if isinstance(val, (int, float)) else (int(val) if str(val).isdigit() else 0)
+        return str(val)
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        return None
+
+    @property
+    def state_class(self) -> str | None:
+        return SensorStateClass.MEASUREMENT if self._numeric else None
 
 
 class EmptyEpsilonScenarioTimeSensor(EmptyEpsilonEntity, SensorEntity):

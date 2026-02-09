@@ -114,3 +114,94 @@ class EEAPIClient:
     async def unpause_game(self) -> None:
         """Unpause the game."""
         await self.exec_lua("unpauseGame()")
+
+    # --- Phase 2: Server-level and primary ship sensors ---
+
+    async def get_active_scenario(self) -> str | None:
+        """Return active scenario name or None."""
+        try:
+            r = await self.exec_lua(
+                "if getScenarioName then return tostring(getScenarioName() or '') end; return ''"
+            )
+            return (r or "").strip() or None
+        except EEAPIError:
+            return None
+
+    async def get_total_objects(self) -> int:
+        """Return count of all game objects."""
+        try:
+            r = await self.exec_lua(
+                "local t=getAllObjects() or {}; return tostring(#t)"
+            )
+            return int(r.strip()) if r and r.strip().isdigit() else 0
+        except (EEAPIError, ValueError):
+            return 0
+
+    async def get_enemy_ship_count(self) -> int:
+        """Return count of hostile CpuShips (from first player's perspective)."""
+        try:
+            r = await self.exec_lua(
+                "local p=getPlayerShip(-1); if not p then return '0' end; "
+                "local n=0; for _,o in ipairs(getAllObjects() or {}) do "
+                "if o.typeName=='CpuShip' and p:isEnemy(o) then n=n+1 end end; return tostring(n)"
+            )
+            return int(r.strip()) if r and r.strip().lstrip("-").isdigit() else 0
+        except (EEAPIError, ValueError):
+            return 0
+
+    async def get_friendly_station_count(self) -> int:
+        """Return count of stations friendly to first player."""
+        try:
+            r = await self.exec_lua(
+                "local p=getPlayerShip(-1); if not p then return '0' end; "
+                "local n=0; for _,o in ipairs(getAllObjects() or {}) do "
+                "if o.typeName=='SpaceStation' and p:isFriendly(o) then n=n+1 end end; return tostring(n)"
+            )
+            return int(r.strip()) if r and r.strip().lstrip("-").isdigit() else 0
+        except (EEAPIError, ValueError):
+            return 0
+
+    async def get_primary_ship_info(self) -> dict[str, str | int | None]:
+        """Return callsign, type, sector, ammo for first player ship. Keys may be None if no ship."""
+        result: dict[str, str | int | None] = {
+            "callsign": None,
+            "ship_type": None,
+            "sector": None,
+            "homing": None,
+            "nuke": None,
+            "emp": None,
+            "mine": None,
+            "hvli": None,
+            "reputation": None,
+        }
+        try:
+            # Single exec for primary ship: callsign, type, sector, ammo, reputation
+            r = await self.exec_lua(
+                "local s=getPlayerShip(-1); if not s then return '' end; "
+                "local c=s:getCallSign() or ''; local t=s:getTypeName() or ''; "
+                "local sec=''; if s.getSectorName then sec=s:getSectorName() or '' end; "
+                "local h=s:getWeaponStorage('Homing') or 0; local n=s:getWeaponStorage('Nuke') or 0; "
+                "local e=s:getWeaponStorage('EMP') or 0; local m=s:getWeaponStorage('Mine') or 0; "
+                "local v=s:getWeaponStorage('HVLI') or 0; "
+                "local rep=0; if getReputationPoints then rep=getReputationPoints(s:getFaction()) or 0 end; "
+                "return c..'|'..t..'|'..sec..'|'..tostring(h)..'|'..tostring(n)..'|'..tostring(e)..'|'..tostring(m)..'|'..tostring(v)..'|'..tostring(rep)"
+            )
+            if not r or "|" not in r:
+                return result
+            parts = r.strip().split("|", 8)
+            result["callsign"] = parts[0].strip() or None
+            result["ship_type"] = parts[1].strip() or None
+            result["sector"] = parts[2].strip() or None
+            for i, k in enumerate(["homing", "nuke", "emp", "mine", "hvli"], 3):
+                try:
+                    result[k] = int(parts[i]) if i < len(parts) and parts[i] else 0
+                except (ValueError, IndexError):
+                    result[k] = 0
+            if len(parts) > 8:
+                try:
+                    result["reputation"] = int(parts[8])
+                except (ValueError, TypeError):
+                    result["reputation"] = None
+            return result
+        except EEAPIError:
+            return result

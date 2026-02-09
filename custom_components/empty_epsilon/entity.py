@@ -34,7 +34,7 @@ class EmptyEpsilonEntity(Entity):
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
             identifiers={(DOMAIN, self._config_entry_id)},
-            name="EmptyEpsilon Server",
+            name="EmptyEpsilon",
             manufacturer="Empty Epsilon",
             configuration_url=f"http://{self.coordinator._config.get('ee_host', '')}:{self.coordinator._config.get('ee_port', 8080)}",
         )

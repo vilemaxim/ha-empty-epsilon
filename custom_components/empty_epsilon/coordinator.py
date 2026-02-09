@@ -76,6 +76,13 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 victory = await self._api.get_victory_faction()
                 data["http"]["victory_faction"] = victory
 
+                # Phase 2: server-level and primary ship sensors
+                data["http"]["active_scenario"] = await self._api.get_active_scenario()
+                data["http"]["total_objects"] = await self._api.get_total_objects()
+                data["http"]["enemy_ship_count"] = await self._api.get_enemy_ship_count()
+                data["http"]["friendly_station_count"] = await self._api.get_friendly_station_count()
+                data["http"]["primary_ship"] = await self._api.get_primary_ship_info()
+
                 # Derive game_status
                 if victory:
                     # Human Navy typical victory faction; treat others as defeat for player
@@ -94,6 +101,11 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 data["http"]["player_ship_count"] = 0
                 data["http"]["paused"] = False
                 data["http"]["victory_faction"] = None
+                data["http"]["active_scenario"] = None
+                data["http"]["total_objects"] = 0
+                data["http"]["enemy_ship_count"] = 0
+                data["http"]["friendly_station_count"] = 0
+                data["http"]["primary_ship"] = {}
 
         except EEAPIError as e:
             _LOGGER.debug("HTTP API update failed: %s", e)

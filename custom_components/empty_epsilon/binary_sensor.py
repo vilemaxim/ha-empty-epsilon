@@ -26,6 +26,9 @@ async def async_setup_entry(
         EmptyEpsilonServerReachableSensor(coordinator, entry_id, config),
         EmptyEpsilonHasShipSensor(coordinator, entry_id, config),
         EmptyEpsilonGamePausedSensor(coordinator, entry_id, config),
+        EmptyEpsilonSACNBinarySensor(coordinator, entry_id, "shieldsUp", "Shields up", "mdi:shield"),
+        EmptyEpsilonSACNBinarySensor(coordinator, entry_id, "docked", "Docked", "mdi:anchor"),
+        EmptyEpsilonSACNBinarySensor(coordinator, entry_id, "docking", "Docking", "mdi:ship-wheel"),
     ]
     async_add_entities(entities)
 
@@ -33,12 +36,12 @@ async def async_setup_entry(
 class EmptyEpsilonServerReachableSensor(EmptyEpsilonEntity, BinarySensorEntity):
     """Whether the EE server is reachable (HTTP responding or sACN packets)."""
 
-    _attr_translation_key = "server_reachable"
+    _attr_translation_key = "online"
     _attr_entity_category = "diagnostic"
 
     def __init__(self, coordinator, entry_id, config):
         super().__init__(
-            coordinator, entry_id, "server_reachable", "Server reachable", "mdi:server-network"
+            coordinator, entry_id, "server_reachable", "Online", "mdi:server-network"
         )
 
     @property
@@ -63,6 +66,20 @@ class EmptyEpsilonHasShipSensor(EmptyEpsilonEntity, BinarySensorEntity):
     def is_on(self) -> bool:
         sacn = self.coordinator.data.get("sacn", {})
         return (sacn.get("hasShip") or 0) > 0.5
+
+
+class EmptyEpsilonSACNBinarySensor(EmptyEpsilonEntity, BinarySensorEntity):
+    """Binary sensor from sACN channel (0.0–1.0, threshold 0.5)."""
+
+    def __init__(self, coordinator, entry_id, config, key: str, name: str, icon: str | None = None):
+        super().__init__(coordinator, entry_id, key, name, icon=icon)
+        self._key = key
+        self._attr_translation_key = key
+
+    @property
+    def is_on(self) -> bool:
+        sacn = self.coordinator.data.get("sacn", {})
+        return (sacn.get(self._key) or 0) > 0.5
 
 
 class EmptyEpsilonGamePausedSensor(EmptyEpsilonEntity, BinarySensorEntity):
