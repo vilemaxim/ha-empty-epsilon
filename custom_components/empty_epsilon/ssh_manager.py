@@ -216,6 +216,23 @@ class SSHManager:
         )
         return True
 
+    async def stop_server(self) -> bool:
+        """
+        Stop EmptyEpsilon by killing the process on the EE host via SSH.
+        Returns True if the kill command was sent successfully.
+        """
+        # pkill matches process name; EmptyEpsilon is the binary name
+        cmd = "pkill -f EmptyEpsilon || true"
+        status, out, err = await self.run_command(cmd, timeout=15.0)
+        if status != 0:
+            _LOGGER.warning(
+                "Stop server command failed (status=%s): %s %s",
+                status, out.strip(), err.strip(),
+            )
+            return False
+        _LOGGER.info("EmptyEpsilon stop sent")
+        return True
+
     async def deploy_hardware_ini(
         self,
         ee_install_path: str,

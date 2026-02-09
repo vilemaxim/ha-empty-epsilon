@@ -11,7 +11,21 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import config_validation as cv
 
-from .const import CONF_ENABLE_EXEC_LUA, DOMAIN
+from .const import (
+    CONF_EE_INSTALL_PATH,
+    CONF_EE_PORT,
+    CONF_ENABLE_EXEC_LUA,
+    CONF_SSH_HOST,
+    CONF_SSH_KEY,
+    CONF_SSH_KNOWN_HOSTS,
+    CONF_SSH_PASSWORD,
+    CONF_SSH_PORT,
+    CONF_SSH_SKIP_HOST_KEY_CHECK,
+    CONF_SSH_USERNAME,
+    DEFAULT_INIT_SCENARIO,
+    DOMAIN,
+)
+from .ssh_manager import SSHManager
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,6 +60,22 @@ def _get_coordinator(hass: HomeAssistant, call: ServiceCall):
     return hass.data[DOMAIN][entity.config_entry_id]
 
 
+def _get_ssh_and_config(hass: HomeAssistant, call: ServiceCall):
+    """Get SSHManager and config dict for server management. Uses _get_coordinator logic."""
+    coord = _get_coordinator(hass, call)
+    cfg = coord._config
+    ssh = SSHManager(
+        host=cfg[CONF_SSH_HOST],
+        port=cfg.get(CONF_SSH_PORT, 22),
+        username=cfg[CONF_SSH_USERNAME],
+        password=cfg.get(CONF_SSH_PASSWORD) or None,
+        key_filename=(cfg.get(CONF_SSH_KEY) or "").strip() or None,
+        known_hosts=cfg.get(CONF_SSH_KNOWN_HOSTS),
+        skip_host_key_check=cfg.get(CONF_SSH_SKIP_HOST_KEY_CHECK, True),
+    )
+    return ssh, cfg
+
+
 async def async_setup_services(hass: HomeAssistant) -> None:
     """Register EmptyEpsilon services."""
 
@@ -76,6 +106,28 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             raise ValueError("Execute Lua is disabled. Enable it in integration options.")
         result = await coord.api.exec_lua(call.data["code"])
         _LOGGER.info("exec_lua result: %s", result[:200] if result else "")
+
+    async def start_server(call: ServiceCall) -> None:
+        ssh, cfg = _get_ssh_and_config(hass, call)
+        install_path = cfg.get(CONF_EE_INSTALL_PATH, "/opt/EmptyEpsilon")
+        ee_port = call.data.get("httpserver") or cfg.get(CONF_EE_PORT, 8080)
+        scenario = call.data.get("scenario") or DEFAULT_INIT_SCENARIO
+        try:
+            ok = await ssh.start_server(install_path, ee_port, scenario)
+            if ok:
+                coord = _get_coordinator(hass, call)
+                await coord.async_request_refresh()
+        finally:
+            await ssh.disconnect()
+
+    async def stop_server(call: ServiceCall) -> None:
+        ssh, _ = _get_ssh_and_config(hass, call)
+        try:
+            await ssh.stop_server()
+            coord = _get_coordinator(hass, call)
+            await coord.async_request_refresh()
+        finally:
+            await ssh.disconnect()
 
     hass.services.async_register(
         DOMAIN,
@@ -119,5 +171,25 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             vol.Optional("entity_id"): cv.entity_id,
             vol.Optional("device_id"): str,
             vol.Required("code"): str,
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "start_server",
+        start_server,
+        schema=vol.Schema({
+            vol.Optional("entity_id"): cv.entity_id,
+            vol.Optional("device_id"): str,
+            vol.Optional("scenario", default=DEFAULT_INIT_SCENARIO): str,
+            vol.Optional("httpserver"): vol.Coerce(int),
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "stop_server",
+        stop_server,
+        schema=vol.Schema({
+            vol.Optional("entity_id"): cv.entity_id,
+            vol.Optional("device_id"): str,
         }),
     )

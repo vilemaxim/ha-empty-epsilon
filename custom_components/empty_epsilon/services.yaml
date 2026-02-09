@@ -1,5 +1,25 @@
 # EmptyEpsilon services
 
+start_server:
+  name: Start server
+  description: Start EmptyEpsilon headless on the EE host via SSH. Always enables httpserver for the integration.
+  fields:
+    scenario:
+      name: Scenario
+      description: Built-in scenario file (e.g. scenario_jump_00.lua, scenario_simulation_asteroids.lua).
+      required: false
+      default: "scenario_jump_00.lua"
+      example: "scenario_jump_00.lua"
+    httpserver:
+      name: HTTP port
+      description: Port for HTTP API (defaults to configured port, usually 8080).
+      required: false
+      example: 8080
+
+stop_server:
+  name: Stop server
+  description: Stop the EmptyEpsilon process on the EE host via SSH.
+
 global_message:
   name: Global message
   description: Display a message to all players in the game.
