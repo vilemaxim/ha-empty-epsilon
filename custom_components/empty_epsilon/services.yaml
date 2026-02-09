@@ -1,1 +1,67 @@
-# EmptyEpsilon services (Phase 3+ will add start_server, spawn, etc.)
+# EmptyEpsilon services
+
+global_message:
+  name: Global message
+  description: Display a message to all players in the game.
+  fields:
+    message:
+      name: Message
+      description: The message to display.
+      required: true
+      example: "Game will pause in 60 seconds"
+
+victory:
+  name: Victory
+  description: End the game with the specified faction as winner.
+  fields:
+    faction:
+      name: Faction
+      description: Winning faction name (e.g. Human Navy, Kraylor).
+      required: false
+      default: "Human Navy"
+      example: "Human Navy"
+
+spawn_player_ship:
+  name: Spawn player ship
+  description: Add a new player ship to the game.
+  fields:
+    template:
+      name: Template
+      description: Ship template (e.g. Atlantis, Phobos M3P, Player Cruiser).
+      required: false
+      default: "Atlantis"
+      example: "Atlantis"
+    callsign:
+      name: Callsign
+      description: Ship callsign.
+      required: false
+      default: "Epsilon"
+      example: "Epsilon"
+    faction:
+      name: Faction
+      description: Faction (e.g. Human Navy).
+      required: false
+      default: "Human Navy"
+      example: "Human Navy"
+    x:
+      name: X
+      description: X position in world coordinates.
+      required: false
+      default: 0
+      example: 0
+    y:
+      name: Y
+      description: Y position in world coordinates.
+      required: false
+      default: 0
+      example: 0
+
+exec_lua:
+  name: Execute Lua
+  description: Execute arbitrary Lua code on the EE server. Requires enable_exec_lua in options. Use with caution.
+  fields:
+    code:
+      name: Code
+      description: Lua code to execute (e.g. "return getScenarioTime()").
+      required: true
+      example: "return getScenarioTime()"

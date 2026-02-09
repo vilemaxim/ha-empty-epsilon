@@ -64,6 +64,11 @@
         "name": "Docking"
       }
     },
+    "switch": {
+      "pause": {
+        "name": "Pause"
+      }
+    },
     "sensor": {
       "game_status": {
         "name": "Game status"

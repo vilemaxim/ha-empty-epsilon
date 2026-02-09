@@ -115,6 +115,35 @@ class EEAPIClient:
         """Unpause the game."""
         await self.exec_lua("unpauseGame()")
 
+    # --- Phase 3: Game controls ---
+
+    async def global_message(self, message: str) -> None:
+        """Display a message to all players."""
+        # Escape quotes in message for Lua string
+        escaped = (message or "").replace("\\", "\\\\").replace('"', '\\"')
+        await self.exec_lua(f'globalMessage("{escaped}")')
+
+    async def victory(self, faction: str) -> None:
+        """End the game with the specified faction as winner."""
+        escaped = (faction or "Human Navy").replace("\\", "\\\\").replace('"', '\\"')
+        await self.exec_lua(f'victory("{escaped}")')
+
+    async def spawn_player_ship(
+        self,
+        template: str = "Atlantis",
+        callsign: str = "Epsilon",
+        faction: str = "Human Navy",
+        x: float = 0,
+        y: float = 0,
+    ) -> None:
+        """Spawn a player ship. Template examples: Atlantis, Phobos M3P, Player Cruiser."""
+        t = (template or "Atlantis").replace("\\", "\\\\").replace('"', '\\"')
+        c = (callsign or "Epsilon").replace("\\", "\\\\").replace('"', '\\"')
+        f = (faction or "Human Navy").replace("\\", "\\\\").replace('"', '\\"')
+        await self.exec_lua(
+            f'PlayerSpaceship():setFaction("{f}"):setTemplate("{t}"):setCallSign("{c}"):setPosition({x},{y})'
+        )
+
     # --- Phase 2: Server-level and primary ship sensors ---
 
     async def get_active_scenario(self) -> str | None:

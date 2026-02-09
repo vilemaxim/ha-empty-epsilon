@@ -9,6 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import (
+    CONF_ENABLE_EXEC_LUA,
     CONF_EE_INSTALL_PATH,
     CONF_EE_PORT,
     CONF_POLL_INTERVAL,
@@ -24,6 +25,7 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import EmptyEpsilonCoordinator
+from .services import async_setup_services
 from .ssh_manager import SSHManager
 
 _LOGGER = logging.getLogger(__name__)
@@ -43,6 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     options = config_entry.options or {}
     data[CONF_POLL_INTERVAL] = options.get(CONF_POLL_INTERVAL, 10)
     data[CONF_SACN_UNIVERSE] = options.get(CONF_SACN_UNIVERSE, 2)
+    data[CONF_ENABLE_EXEC_LUA] = options.get(CONF_ENABLE_EXEC_LUA, False)
 
     # Start EE server via SSH before coordinator setup (proves we have full control)
     ssh = SSHManager(
@@ -67,7 +70,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     await coordinator.start_sacn()
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, ["sensor", "binary_sensor"])
+    await hass.config_entries.async_forward_entry_setups(
+        config_entry, ["sensor", "binary_sensor", "switch"]
+    )
+
+    if not hass.data.get(DOMAIN + "_services"):
+        async_setup_services(hass)
+        hass.data[DOMAIN + "_services"] = True
 
     return True
 
@@ -78,7 +87,7 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     if coordinator:
         coordinator.stop_sacn()
     unload_ok = await hass.config_entries.async_unload_platforms(
-        config_entry, ["sensor", "binary_sensor"]
+        config_entry, ["sensor", "binary_sensor", "switch"]
     )
     if unload_ok and DOMAIN in hass.data:
         hass.data[DOMAIN].pop(config_entry.entry_id, None)
