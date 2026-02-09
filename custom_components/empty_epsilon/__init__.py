@@ -67,7 +67,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     await coordinator.start_sacn()
 
-    hass.config_entries.async_setup_platforms(config_entry, ["sensor", "binary_sensor"])
+    await hass.config_entries.async_forward_entry_setups(config_entry, ["sensor", "binary_sensor"])
 
     return True
 
