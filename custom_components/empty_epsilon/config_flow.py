@@ -273,11 +273,16 @@ class EmptyEpsilonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(
         config_entry: config_entries.ConfigEntry,
     ) -> EmptyEpsilonOptionsFlow:
-        return EmptyEpsilonOptionsFlow()
+        return EmptyEpsilonOptionsFlow(config_entry)
 
 
 class EmptyEpsilonOptionsFlow(config_entries.OptionsFlow):
     """Handle EmptyEpsilon options."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow. config_entry required for HA 2024.1-2024.9 compatibility."""
+        super().__init__()
+        self._config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -286,7 +291,7 @@ class EmptyEpsilonOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(data=user_input)
 
-        options = self.config_entry.options or {}
+        options = self._config_entry.options or {}
         schema = vol.Schema(
             {
                 vol.Optional(
