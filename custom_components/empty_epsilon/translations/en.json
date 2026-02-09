@@ -1,0 +1,57 @@
+{
+  "config": {
+    "step": {
+      "http": {
+        "title": "Connect to EmptyEpsilon",
+        "description": "Enter the HTTP API address of your EmptyEpsilon server. The server must be started with httpserver=PORT.",
+        "data": {
+          "ee_host": "Host",
+          "ee_port": "Port"
+        }
+      },
+      "ssh": {
+        "title": "SSH (optional)",
+        "description": "Optional. Configure SSH for server management. Leave SSH host empty to skip.",
+        "data": {
+          "ssh_host": "SSH host",
+          "ssh_port": "SSH port",
+          "ssh_username": "Username",
+          "ssh_password": "Password",
+          "ssh_key": "Private key path",
+          "ee_install_path": "EE install path",
+          "scenario_path": "Local scenario path"
+        }
+      },
+      "options": {
+        "title": "Options",
+        "data": {
+          "poll_interval": "HTTP poll interval (seconds)",
+          "sacn_universe": "sACN universe",
+          "enable_exec_lua": "Enable Execute Lua service"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the EE HTTP API.",
+      "unexpected_response": "Unexpected response from server."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "server_reachable": {
+        "name": "Server reachable"
+      },
+      "has_ship": {
+        "name": "Has ship"
+      },
+      "game_paused": {
+        "name": "Game paused"
+      }
+    },
+    "sensor": {
+      "game_status": {
+        "name": "Game status"
+      }
+    }
+  }
+}

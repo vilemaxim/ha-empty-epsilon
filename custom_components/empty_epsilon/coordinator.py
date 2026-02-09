@@ -1,0 +1,124 @@
+"""DataUpdateCoordinator combining sACN push and HTTP API poll for EmptyEpsilon."""
+
+from __future__ import annotations
+
+import logging
+from typing import Any
+
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+
+from .const import (
+    CONF_EE_HOST,
+    CONF_EE_PORT,
+    CONF_POLL_INTERVAL,
+    CONF_SACN_UNIVERSE,
+    DOMAIN,
+    GAME_STATUS_GAME_OVER_DEFEAT,
+    GAME_STATUS_GAME_OVER_VICTORY,
+    GAME_STATUS_PAUSED,
+    GAME_STATUS_PLAYING,
+    GAME_STATUS_SETUP,
+)
+from .ee_api import EEAPIClient, EEAPIError
+from .sacn_listener import SACNListener
+
+_LOGGER = logging.getLogger(__name__)
+
+
+class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+    """Combines sACN real-time data with HTTP API polled data."""
+
+    def __init__(self, hass: HomeAssistant, config: dict[str, Any]) -> None:
+        self._config = config
+        host = config[CONF_EE_HOST]
+        port = config[CONF_EE_PORT]
+        self._base_url = f"http://{host}:{port}"
+        self._api = EEAPIClient(self._base_url)
+        poll_interval = config.get(CONF_POLL_INTERVAL, 10)
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=DOMAIN,
+            update_interval=poll_interval,
+        )
+        self._sacn: SACNListener | None = None
+        universe = config.get(CONF_SACN_UNIVERSE, 2)
+        self._sacn = SACNListener(universe=universe)
+
+    @property
+    def api(self) -> EEAPIClient:
+        return self._api
+
+    @property
+    def sacn_listener(self) -> SACNListener | None:
+        return self._sacn
+
+    async def _async_update_data(self) -> dict[str, Any]:
+        """Merge sACN data with HTTP API data."""
+        data: dict[str, Any] = {"sacn": {}, "http": {}, "game_status": None}
+
+        # Latest sACN (real-time)
+        if self._sacn:
+            data["sacn"] = self._sacn.get_data()
+
+        # HTTP API (game status, player count, scenario time, paused)
+        try:
+            has_game = await self._api.get_has_game()
+            data["http"]["has_game"] = has_game
+            data["http"]["server_reachable"] = True
+
+            if has_game:
+                data["http"]["scenario_time"] = await self._api.get_scenario_time()
+                data["http"]["player_ship_count"] = await self._api.get_player_ship_count()
+                data["http"]["paused"] = await self._api.is_paused()
+                victory = await self._api.get_victory_faction()
+                data["http"]["victory_faction"] = victory
+
+                # Derive game_status
+                if victory:
+                    # Human Navy typical victory faction; treat others as defeat for player
+                    data["game_status"] = (
+                        GAME_STATUS_GAME_OVER_VICTORY
+                        if victory and "human" in victory.lower()
+                        else GAME_STATUS_GAME_OVER_DEFEAT
+                    )
+                elif data["http"]["paused"]:
+                    data["game_status"] = GAME_STATUS_PAUSED
+                else:
+                    data["game_status"] = GAME_STATUS_PLAYING
+            else:
+                data["game_status"] = GAME_STATUS_SETUP
+                data["http"]["scenario_time"] = None
+                data["http"]["player_ship_count"] = 0
+                data["http"]["paused"] = False
+                data["http"]["victory_faction"] = None
+
+        except EEAPIError as e:
+            _LOGGER.debug("HTTP API update failed: %s", e)
+            data["http"]["server_reachable"] = False
+            data["http"]["has_game"] = False
+            data["game_status"] = GAME_STATUS_SETUP
+            # Don't raise so sACN data can still be used
+        except Exception as e:
+            _LOGGER.exception("Update failed: %s", e)
+            data["http"]["server_reachable"] = False
+            raise UpdateFailed from e
+
+        return data
+
+    async def start_sacn(self) -> None:
+        """Start sACN listener and wire callback to request refresh."""
+        if not self._sacn:
+            return
+        # Callback runs on event loop (from sacn_listener._packet_received); schedule refresh
+        def on_sacn_data(_data: dict) -> None:
+            self.hass.async_create_task(self.async_request_refresh())
+
+        self._sacn.set_callback(on_sacn_data)
+        await self._sacn.start()
+
+    def stop_sacn(self) -> None:
+        """Stop sACN listener."""
+        if self._sacn:
+            self._sacn.stop()

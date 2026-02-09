@@ -1,0 +1,12 @@
+{
+  "domain": "empty_epsilon",
+  "name": "EmptyEpsilon",
+  "codeowners": ["@vilemaxim"],
+  "config_flow": true,
+  "documentation": "https://github.com/vilemaxim/ha-empty-epsilon",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/vilemaxim/ha-empty-epsilon/issues",
+  "requirements": ["asyncssh>=2.14.0", "sacn>=1.9.0"],
+  "version": "0.1.0",
+  "integration_type": "hub"
+}
