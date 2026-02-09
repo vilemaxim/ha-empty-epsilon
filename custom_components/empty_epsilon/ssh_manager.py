@@ -100,7 +100,11 @@ class SSHManager:
 
     async def connect(self) -> bool:
         """Establish SSH connection. Returns True on success."""
-        import asyncssh  # Lazy import - asyncssh blocks on load
+        # Import asyncssh in a thread - it does blocking I/O (open, glob, scandir) on load
+        import sys
+        if "asyncssh" not in sys.modules:
+            await asyncio.to_thread(__import__, "asyncssh")
+        import asyncssh
 
         known_hosts_obj = None
         if not self._skip_host_key_check and self._known_hosts:

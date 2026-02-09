@@ -286,14 +286,11 @@ class EmptyEpsilonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(
         config_entry: config_entries.ConfigEntry,
     ) -> EmptyEpsilonOptionsFlow:
-        return EmptyEpsilonOptionsFlow(config_entry)
+        return EmptyEpsilonOptionsFlow()
 
 
 class EmptyEpsilonOptionsFlow(config_entries.OptionsFlow):
     """Handle EmptyEpsilon options."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None

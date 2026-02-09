@@ -29,6 +29,10 @@ A custom Home Assistant integration for [Empty Epsilon](https://daid.github.io/E
 - For server management (start/stop, scenario upload): SSH access to the EE server (Linux).
 - Home Assistant 2024.1 or newer.
 
+## Logo
+
+The Empty Epsilon logo is included in `custom_components/empty_epsilon/images/` (icon.png, logo.png). To have it appear in the Home Assistant frontend (Settings → Integrations), submit the images to the [Home Assistant brands repository](https://github.com/home-assistant/brands) by adding `custom_integrations/empty_epsilon/` with `icon.png` and `logo.png`.
+
 ## Documentation
 
 See [PROJECT.md](PROJECT.md) for full architecture, sensor list, and implementation phases.
