@@ -68,12 +68,16 @@ class SSHManager:
         username: str,
         password: str | None = None,
         key_filename: str | None = None,
+        known_hosts: str | None = None,
+        skip_host_key_check: bool = False,
     ) -> None:
         self._host = host
         self._port = port
         self._username = username
         self._password = password or ""
         self._key_filename = key_filename.strip() if key_filename else None
+        self._known_hosts = known_hosts.strip() or None
+        self._skip_host_key_check = skip_host_key_check
         self._conn: Any = None
 
     def _connect_kwargs(self) -> dict[str, Any]:
@@ -86,6 +90,13 @@ class SSHManager:
             kwargs["client_keys"] = [self._key_filename]
         if self._password:
             kwargs["password"] = self._password
+        # Host key verification: known_hosts file, or skip if requested
+        if self._skip_host_key_check:
+            kwargs["known_hosts"] = None
+        elif self._known_hosts:
+            path = Path(self._known_hosts)
+            if path.exists():
+                kwargs["known_hosts"] = str(path)
         return kwargs
 
     async def connect(self) -> bool:

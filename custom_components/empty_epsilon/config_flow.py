@@ -22,8 +22,10 @@ from .const import (
     CONF_SCENARIO_PATH,
     CONF_SSH_HOST,
     CONF_SSH_KEY,
+    CONF_SSH_KNOWN_HOSTS,
     CONF_SSH_PASSWORD,
     CONF_SSH_PORT,
+    CONF_SSH_SKIP_HOST_KEY_CHECK,
     CONF_SSH_USERNAME,
     DEFAULT_HTTP_PORT,
     DEFAULT_POLL_INTERVAL,
@@ -44,6 +46,8 @@ SSH_SCHEMA = vol.Schema(
         vol.Required(CONF_SSH_USERNAME): str,
         vol.Optional(CONF_SSH_PASSWORD, default=""): str,
         vol.Optional(CONF_SSH_KEY, default=""): str,
+        vol.Optional(CONF_SSH_KNOWN_HOSTS, default=""): str,
+        vol.Optional(CONF_SSH_SKIP_HOST_KEY_CHECK, default=False): bool,
     }
 )
 
@@ -61,13 +65,25 @@ EE_SERVER_SCHEMA = vol.Schema(
 
 
 async def _validate_ssh(
-    hass: HomeAssistant, host: str, port: int, username: str, password: str, key: str
+    hass: HomeAssistant,
+    host: str,
+    port: int,
+    username: str,
+    password: str,
+    key: str,
+    known_hosts: str = "",
+    skip_host_key_check: bool = False,
 ) -> str | None:
     """Validate SSH connection. Returns error string or None."""
     try:
         from .ssh_manager import SSHManager
 
-        ssh = SSHManager(host, port, username, password or None, key or None)
+        ssh = SSHManager(
+            host, port, username,
+            password or None, key or None,
+            known_hosts=known_hosts or None,
+            skip_host_key_check=skip_host_key_check,
+        )
         if await ssh.connect():
             await ssh.disconnect()
             return None
@@ -122,6 +138,8 @@ class EmptyEpsilonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             user_input[CONF_SSH_USERNAME],
             user_input.get(CONF_SSH_PASSWORD, ""),
             user_input.get(CONF_SSH_KEY, ""),
+            user_input.get(CONF_SSH_KNOWN_HOSTS, ""),
+            user_input.get(CONF_SSH_SKIP_HOST_KEY_CHECK, False),
         )
         if error:
             return self.async_show_form(

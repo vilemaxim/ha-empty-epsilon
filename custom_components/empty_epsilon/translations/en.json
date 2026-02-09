@@ -9,7 +9,9 @@
           "ssh_port": "SSH Port",
           "ssh_username": "Username",
           "ssh_password": "Password",
-          "ssh_key": "Private Key Path"
+          "ssh_key": "Private Key Path",
+          "ssh_known_hosts": "Known Hosts File",
+          "ssh_skip_host_key_check": "Skip host key verification"
         }
       },
       "server": {
