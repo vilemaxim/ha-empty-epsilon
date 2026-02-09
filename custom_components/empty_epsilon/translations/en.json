@@ -1,25 +1,25 @@
 {
   "config": {
     "step": {
-      "http": {
-        "title": "Connect to EmptyEpsilon",
-        "description": "Enter the HTTP API address of your EmptyEpsilon server. The server must be started with httpserver=PORT.",
+      "user": {
+        "title": "SSH Connection",
+        "description": "SSH access is required to start/stop the EmptyEpsilon server.",
         "data": {
-          "ee_host": "Host",
-          "ee_port": "Port"
-        }
-      },
-      "ssh": {
-        "title": "SSH (optional)",
-        "description": "Optional. Configure SSH for server management. Leave SSH host empty to skip.",
-        "data": {
-          "ssh_host": "SSH host",
-          "ssh_port": "SSH port",
+          "ssh_host": "SSH Host",
+          "ssh_port": "SSH Port",
           "ssh_username": "Username",
           "ssh_password": "Password",
-          "ssh_key": "Private key path",
-          "ee_install_path": "EE install path",
-          "scenario_path": "Local scenario path"
+          "ssh_key": "Private Key Path"
+        }
+      },
+      "server": {
+        "title": "EmptyEpsilon Server",
+        "description": "Configure the EmptyEpsilon server. Leave EE Host empty to use SSH host.",
+        "data": {
+          "ee_host": "EE Host",
+          "ee_port": "HTTP Port",
+          "ee_install_path": "EE Install Path",
+          "scenario_path": "Scenario Path"
         }
       },
       "options": {
@@ -32,8 +32,8 @@
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to the EE HTTP API.",
-      "unexpected_response": "Unexpected response from server."
+      "cannot_connect_ssh": "Failed to connect via SSH.",
+      "server_not_running": "Server not reachable (may not be running)."
     }
   },
   "entity": {
