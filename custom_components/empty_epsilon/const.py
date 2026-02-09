@@ -20,6 +20,12 @@ CONF_SSH_PASSWORD = "ssh_password"
 CONF_SSH_KEY = "ssh_key"
 CONF_SSH_KNOWN_HOSTS = "ssh_known_hosts"
 CONF_SSH_SKIP_HOST_KEY_CHECK = "ssh_skip_host_key_check"
+
+# Paths for generated files (under /config)
+EE_CONFIG_DIR = "empty_epsilon"
+EE_KEY_PATH = f"/config/{EE_CONFIG_DIR}/id_rsa"
+EE_PUBKEY_PATH = f"/config/{EE_CONFIG_DIR}/ee_ssh_public_key.pub"
+EE_KNOWN_HOSTS_PATH = f"/config/{EE_CONFIG_DIR}/known_hosts"
 CONF_POLL_INTERVAL = "poll_interval"
 CONF_SACN_UNIVERSE = "sacn_universe"
 CONF_EE_INSTALL_PATH = "ee_install_path"

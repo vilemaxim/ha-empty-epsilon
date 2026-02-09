@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-import asyncssh
+# Import deferred to connect() - asyncssh does blocking I/O on import
 
 from .const import (
     DEFAULT_SACN_CHANNELS,
@@ -99,6 +99,8 @@ class SSHManager:
 
     async def connect(self) -> bool:
         """Establish SSH connection. Returns True on success."""
+        import asyncssh  # Lazy import - asyncssh blocks on load
+
         known_hosts_obj = None
         if not self._skip_host_key_check and self._known_hosts:
             path = Path(self._known_hosts)

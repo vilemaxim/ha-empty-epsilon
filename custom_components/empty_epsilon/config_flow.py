@@ -8,7 +8,6 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 
@@ -32,9 +31,21 @@ from .const import (
     DEFAULT_SACN_UNIVERSE,
     DEFAULT_SSH_PORT,
     DOMAIN,
+    EE_KEY_PATH,
+    EE_KNOWN_HOSTS_PATH,
+    EE_PUBKEY_PATH,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# Step 0: Key setup
+KEY_SCHEMA = vol.Schema(
+    {
+        vol.Required("key_choice", default="generate"): vol.In(
+            ["generate", "use_existing"]
+        ),
+    }
+)
 
 # Step 1: SSH (required for server management)
 SSH_SCHEMA = vol.Schema(
@@ -46,8 +57,7 @@ SSH_SCHEMA = vol.Schema(
         vol.Required(CONF_SSH_USERNAME): str,
         vol.Optional(CONF_SSH_PASSWORD, default=""): str,
         vol.Optional(CONF_SSH_KEY, default=""): str,
-        vol.Optional(CONF_SSH_KNOWN_HOSTS, default=""): str,
-        vol.Optional(CONF_SSH_SKIP_HOST_KEY_CHECK, default=False): bool,
+        vol.Optional(CONF_SSH_SKIP_HOST_KEY_CHECK, default=True): bool,
     }
 )
 
@@ -71,26 +81,30 @@ async def _validate_ssh(
     username: str,
     password: str,
     key: str,
-    known_hosts: str = "",
-    skip_host_key_check: bool = False,
-) -> str | None:
-    """Validate SSH connection. Returns error string or None."""
-    try:
-        from .ssh_manager import SSHManager
+    skip_host_key_check: bool,
+) -> tuple[str | None, str | None]:
+    """
+    Validate SSH connection in executor (avoids blocking asyncssh import).
+    Returns (error_message, known_hosts_path).
+    On first connect with skip=True, fetches and saves host key; known_hosts_path is set.
+    """
+    from .ssh_setup import validate_ssh_sync
 
-        ssh = SSHManager(
-            host, port, username,
-            password or None, key or None,
-            known_hosts=known_hosts or None,
-            skip_host_key_check=skip_host_key_check,
-        )
-        if await ssh.connect():
-            await ssh.disconnect()
-            return None
-        return "cannot_connect_ssh"
-    except Exception as e:
-        _LOGGER.debug("SSH validation failed: %s", e)
-        return "cannot_connect_ssh"
+    result = await hass.async_add_executor_job(
+        validate_ssh_sync,
+        host,
+        port,
+        username,
+        password or None,
+        key or None,
+        None,  # known_hosts - we'll use saved path after first connect
+        skip_host_key_check,
+        True,  # save_host_key_on_first_connect
+    )
+    success, err, saved_path = result
+    if success:
+        return None, saved_path
+    return err or "cannot_connect_ssh", None
 
 
 async def _validate_http(hass: HomeAssistant, host: str, port: int) -> str | None:
@@ -116,39 +130,112 @@ class EmptyEpsilonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._ssh_data: dict[str, Any] = {}
         self._ee_data: dict[str, Any] = {}
+        self._generated_key_path: str | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Handle the initial step (SSH credentials)."""
+        """Handle the initial step (key setup)."""
         if user_input is None:
             return self.async_show_form(
                 step_id="user",
-                data_schema=SSH_SCHEMA,
+                data_schema=KEY_SCHEMA,
                 description_placeholders={
-                    "info": "SSH access is required to start/stop the EmptyEpsilon server and deploy configuration."
+                    "info": "Generate a new SSH key for this integration, or use an existing key."
                 },
             )
 
-        # Validate SSH
-        error = await _validate_ssh(
+        if user_input.get("key_choice") == "generate":
+            return await self.async_step_generate_key()
+        return await self.async_step_ssh()
+
+    async def async_step_generate_key(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Generate SSH key and show instructions."""
+        if user_input is None:
+            # Generate key in executor (asyncssh blocks)
+            from .ssh_setup import generate_ssh_key
+
+            try:
+                await self.hass.async_add_executor_job(generate_ssh_key)
+                self._generated_key_path = EE_KEY_PATH
+            except Exception as e:
+                _LOGGER.exception("Key generation failed: %s", e)
+                return self.async_show_form(
+                    step_id="user",
+                    data_schema=KEY_SCHEMA,
+                    errors={"base": "key_generation_failed"},
+                )
+            return self.async_show_form(
+                step_id="generate_key",
+                data_schema=vol.Schema({
+                    vol.Required("proceed", default=True): bool,
+                }),
+                description=(
+                    f"Public key saved to:\n{EE_PUBKEY_PATH}\n\n"
+                    "Also at: http://YOUR_HA:8123/local/empty_epsilon/ee_ssh_public_key.pub\n\n"
+                    "Add to EE server: copy the key, then append to ~/.ssh/authorized_keys"
+                ),
+            )
+        return await self.async_step_ssh()
+
+    async def async_step_ssh(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle SSH credentials step."""
+        if user_input is None:
+            schema = SSH_SCHEMA.extend({
+                vol.Optional(
+                    CONF_SSH_KEY,
+                    default=self._generated_key_path or "",
+                ): str,
+            })
+            return self.async_show_form(
+                step_id="ssh",
+                data_schema=schema,
+                description_placeholders={
+                    "info": "SSH access to the EE server. "
+                    "During setup, the server's host key will be trusted automatically."
+                },
+            )
+
+        key_path = (user_input.get(CONF_SSH_KEY) or "").strip()
+        if not key_path and self._generated_key_path:
+            key_path = self._generated_key_path
+        if not key_path and not user_input.get(CONF_SSH_PASSWORD):
+            return self.async_show_form(
+                step_id="ssh",
+                data_schema=SSH_SCHEMA.extend({
+                    vol.Optional(CONF_SSH_KEY, default=key_path): str,
+                }),
+                errors={"base": "key_or_password_required"},
+            )
+
+        # Validate SSH in executor
+        error, known_hosts_path = await _validate_ssh(
             self.hass,
             user_input[CONF_SSH_HOST],
             user_input[CONF_SSH_PORT],
             user_input[CONF_SSH_USERNAME],
             user_input.get(CONF_SSH_PASSWORD, ""),
-            user_input.get(CONF_SSH_KEY, ""),
-            user_input.get(CONF_SSH_KNOWN_HOSTS, ""),
-            user_input.get(CONF_SSH_SKIP_HOST_KEY_CHECK, False),
+            key_path,
+            user_input.get(CONF_SSH_SKIP_HOST_KEY_CHECK, True),
         )
         if error:
             return self.async_show_form(
-                step_id="user",
-                data_schema=SSH_SCHEMA,
+                step_id="ssh",
+                data_schema=SSH_SCHEMA.extend({
+                    vol.Optional(CONF_SSH_KEY, default=key_path): str,
+                }),
                 errors={"base": error},
             )
 
         self._ssh_data = dict(user_input)
+        self._ssh_data[CONF_SSH_KEY] = key_path
+        if known_hosts_path:
+            self._ssh_data[CONF_SSH_KNOWN_HOSTS] = known_hosts_path
+            self._ssh_data[CONF_SSH_SKIP_HOST_KEY_CHECK] = False
         return await self.async_step_server()
 
     async def async_step_server(
@@ -160,20 +247,16 @@ class EmptyEpsilonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 step_id="server",
                 data_schema=EE_SERVER_SCHEMA,
                 description_placeholders={
-                    "info": "Configure EmptyEpsilon server location and HTTP port. "
+                    "info": "Configure EmptyEpsilon server. "
                     "Leave EE Host empty to use the SSH host. "
                     "The server does not need to be running now."
                 },
             )
 
         self._ee_data = dict(user_input)
-        
-        # If EE host is empty, use SSH host
         if not self._ee_data.get(CONF_EE_HOST):
             self._ee_data[CONF_EE_HOST] = self._ssh_data[CONF_SSH_HOST]
 
-        # Optional: try to validate HTTP if server is running
-        # (don't fail if it's not)
         http_error = await _validate_http(
             self.hass,
             self._ee_data[CONF_EE_HOST],
@@ -181,8 +264,8 @@ class EmptyEpsilonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
         if http_error:
             _LOGGER.info(
-                "EmptyEpsilon HTTP API not reachable during setup (server may not be running). "
-                "This is OK - you can start it later via services."
+                "EmptyEpsilon HTTP API not reachable during setup. "
+                "You can start it later via services."
             )
 
         return self._create_entry()

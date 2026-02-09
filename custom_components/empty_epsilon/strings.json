@@ -35,6 +35,8 @@
     },
     "error": {
       "cannot_connect_ssh": "Failed to connect via SSH. Check host, port, username, and credentials.",
+      "key_generation_failed": "Failed to generate SSH key.",
+      "key_or_password_required": "Provide a private key path or password.",
       "server_not_running": "EmptyEpsilon HTTP API not reachable (server may not be running yet).",
       "unexpected_response": "Unexpected response from server."
     },
