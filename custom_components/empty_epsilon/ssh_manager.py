@@ -80,7 +80,7 @@ class SSHManager:
         self._skip_host_key_check = skip_host_key_check
         self._conn: Any = None
 
-    def _connect_kwargs(self) -> dict[str, Any]:
+    def _connect_kwargs(self, known_hosts_obj: Any = None) -> dict[str, Any]:
         kwargs = {
             "host": self._host,
             "port": self._port,
@@ -90,21 +90,26 @@ class SSHManager:
             kwargs["client_keys"] = [self._key_filename]
         if self._password:
             kwargs["password"] = self._password
-        # Host key verification: known_hosts file, or skip if requested
+        # Host key verification: known_hosts object, or skip if requested
         if self._skip_host_key_check:
             kwargs["known_hosts"] = None
-        elif self._known_hosts:
-            path = Path(self._known_hosts)
-            if path.exists():
-                kwargs["known_hosts"] = str(path)
+        elif known_hosts_obj is not None:
+            kwargs["known_hosts"] = known_hosts_obj
         return kwargs
 
     async def connect(self) -> bool:
         """Establish SSH connection. Returns True on success."""
+        known_hosts_obj = None
+        if not self._skip_host_key_check and self._known_hosts:
+            path = Path(self._known_hosts)
+            if path.exists():
+                # Load file in executor to avoid blocking the event loop
+                content = await asyncio.to_thread(path.read_text, encoding="utf-8")
+                known_hosts_obj = asyncssh.import_known_hosts(content)
+
         try:
-            import asyncssh
             self._conn = await asyncio.wait_for(
-                asyncssh.connect(**self._connect_kwargs()),
+                asyncssh.connect(**self._connect_kwargs(known_hosts_obj)),
                 timeout=15.0,
             )
             return True
