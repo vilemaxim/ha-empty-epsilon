@@ -7,6 +7,14 @@ A custom Home Assistant integration for [Empty Epsilon](https://daid.github.io/E
 - **Real-time game state** via sACN/E1.31 (~20 Hz): hull, shields, energy, alerts, system health
 - **HTTP API** for commands and supplementary data: pause, spawn, scenario time, callsigns
 - **Server management** via SSH: start/stop EE, upload scenarios, deploy sACN config
+- **Start paused** by default — use the Pause switch or `unpauseGame()` to begin
+
+## Sensor data sources
+
+| Source | Sensors |
+|--------|---------|
+| **HTTP API** (polled) | Game status, Player ship count, Scenario time, Active scenario, Total objects, Enemy ships, Friendly stations, Game paused, Callsign, Ship type, Sector, Homing/Nuke/EMP/Mine/HVLI ammo, Reputation |
+| **sACN** (real-time push) | Hull, Front shields, Rear shields, Energy, Impulse, Warp, Has ship, Shields up, Docked, Docking |
 
 ## Installation
 

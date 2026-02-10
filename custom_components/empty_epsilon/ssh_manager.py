@@ -359,6 +359,7 @@ class SSHManager:
             "httpserver": str(ee_port),
             "headless_name": headless_name,
             "headless_internet": "1" if headless_internet else "0",
+            "startpaused": "1",
         }
         await self._log_remote("deploy_options_ini", f"options: {our_keys}")
 
