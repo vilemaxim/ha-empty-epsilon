@@ -81,4 +81,4 @@ GAME_STATUS_GAME_OVER_DEFEAT = "game_over_defeat"
 EE_EXEC_PATH = "/exec.lua"
 
 # Default scenario (built-in EE scenario filename in scripts/)
-DEFAULT_INIT_SCENARIO = "scenario_01_waves.lua"
+DEFAULT_INIT_SCENARIO = "scenario_03_waves.lua"

@@ -6,10 +6,10 @@ start_server:
   fields:
     scenario:
       name: Scenario
-      description: Built-in scenario file (e.g. scenario_jump_00.lua, scenario_simulation_asteroids.lua).
+      description: Built-in scenario file (e.g. scenario_03_waves.lua, scenario_00_basic.lua).
       required: false
-      default: "scenario_01_waves.lua"
-      example: "scenario_01_waves.lua"
+      default: "scenario_03_waves.lua"
+      example: "scenario_03_waves.lua"
     httpserver:
       name: HTTP port
       description: Port for HTTP API (defaults to configured port, usually 8080).

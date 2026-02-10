@@ -32,7 +32,7 @@
           "ee_install_path": "EE Install Path (directory containing EmptyEpsilon binary)",
           "headless_name": "Server name (shown to clients)",
           "headless_internet": "Register with internet master server (for discovery)",
-          "scenario": "Scenario filename (e.g. scenario_01_waves.lua)",
+          "scenario": "Scenario filename (e.g. scenario_03_waves.lua)",
           "enable_exec_lua": "Enable Execute Lua service"
         }
       }
