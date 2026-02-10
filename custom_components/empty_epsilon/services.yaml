@@ -18,7 +18,11 @@ start_server:
 
 stop_server:
   name: Stop server
-  description: Stop the EmptyEpsilon process on the EE host via SSH.
+  description: Gracefully shut down EmptyEpsilon via shutdownGame() HTTP API. Falls back to killing the process if the API is unreachable.
+
+stop_server_forced:
+  name: Stop server (forced)
+  description: Force kill the EmptyEpsilon process via SSH (pkill). Use when graceful shutdown fails or the server is unresponsive.
 
 global_message:
   name: Global message
@@ -78,7 +82,7 @@ spawn_player_ship:
 
 exec_lua:
   name: Execute Lua
-  description: Execute arbitrary Lua code on the EE server. Requires enable_exec_lua in options. Use with caution.
+  description: Execute arbitrary Lua code on the EE server. Use with caution.
   fields:
     code:
       name: Code

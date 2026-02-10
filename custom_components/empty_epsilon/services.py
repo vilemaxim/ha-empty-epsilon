@@ -14,7 +14,6 @@ from homeassistant.helpers import config_validation as cv
 from .const import (
     CONF_EE_INSTALL_PATH,
     CONF_EE_PORT,
-    CONF_ENABLE_EXEC_LUA,
     CONF_HEADLESS_INTERNET,
     CONF_HEADLESS_NAME,
     CONF_SCENARIO,
@@ -106,8 +105,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     async def exec_lua(call: ServiceCall) -> None:
         coord = _get_coordinator(hass, call)
-        if not coord._config.get(CONF_ENABLE_EXEC_LUA, False):
-            raise ValueError("Execute Lua is disabled. Enable it in integration options.")
         result = await coord.api.exec_lua(call.data["code"])
         _LOGGER.info("exec_lua result: %s", result[:200] if result else "")
 
@@ -143,6 +140,22 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             raise
 
     async def stop_server(call: ServiceCall) -> None:
+        """Graceful shutdown via shutdownGame() HTTP API; fallback to pkill if API fails."""
+        coord = _get_coordinator(hass, call)
+        try:
+            await coord.api.shutdown_game()
+            _LOGGER.info("stop_server: shutdownGame() succeeded")
+        except Exception as e:
+            _LOGGER.warning("stop_server: shutdownGame() failed (%s), falling back to pkill", e)
+            ssh, _ = _get_ssh_and_config(hass, call)
+            try:
+                await ssh.stop_server()
+            finally:
+                await ssh.disconnect()
+        await coord.async_request_refresh()
+
+    async def stop_server_forced(call: ServiceCall) -> None:
+        """Force kill EmptyEpsilon process via SSH (pkill). Use when graceful shutdown fails."""
         ssh, _ = _get_ssh_and_config(hass, call)
         try:
             await ssh.stop_server()
@@ -299,6 +312,15 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         DOMAIN,
         "stop_server",
         stop_server,
+        schema=vol.Schema({
+            vol.Optional("entity_id"): cv.entity_id,
+            vol.Optional("device_id"): str,
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "stop_server_forced",
+        stop_server_forced,
         schema=vol.Schema({
             vol.Optional("entity_id"): cv.entity_id,
             vol.Optional("device_id"): str,

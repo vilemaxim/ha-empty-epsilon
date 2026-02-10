@@ -9,7 +9,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import (
-    CONF_ENABLE_EXEC_LUA,
     CONF_EE_INSTALL_PATH,
     CONF_EE_PORT,
     CONF_HEADLESS_INTERNET,
@@ -49,7 +48,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     options = config_entry.options or {}
     data[CONF_POLL_INTERVAL] = options.get(CONF_POLL_INTERVAL, 10)
     data[CONF_SACN_UNIVERSE] = options.get(CONF_SACN_UNIVERSE, 2)
-    data[CONF_ENABLE_EXEC_LUA] = options.get(CONF_ENABLE_EXEC_LUA, False)
     if CONF_EE_INSTALL_PATH in options:
         data[CONF_EE_INSTALL_PATH] = options[CONF_EE_INSTALL_PATH]
     data[CONF_HEADLESS_NAME] = options.get(CONF_HEADLESS_NAME, "EmptyEpsilon")

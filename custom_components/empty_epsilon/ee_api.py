@@ -119,6 +119,10 @@ class EEAPIClient:
         """Unpause the game."""
         await self.exec_lua("unpauseGame()")
 
+    async def shutdown_game(self) -> None:
+        """Request graceful shutdown via EE shutdownGame(). Exits the process cleanly."""
+        await self.exec_lua("shutdownGame()")
+
     # --- Phase 3: Game controls ---
 
     async def global_message(self, message: str) -> None:
