@@ -25,8 +25,8 @@ A custom Home Assistant integration for [Empty Epsilon](https://daid.github.io/E
 
 ## Requirements
 
-- Empty Epsilon server with HTTP API enabled (`httpserver=PORT` on the command line).
-- For server management (start/stop, scenario upload): SSH access to the EE server (Linux).
+- Empty Epsilon server with HTTP API enabled (`httpserver=PORT` on the command line). The EE server is expected to be an Ubuntu system with the latest Empty Epsilon installed via the official `.deb` package (typically at `/usr/local/bin/EmptyEpsilon`).
+- For server management (start/stop, scenario upload): SSH access to the EE server.
 - Home Assistant 2024.1 or newer.
 
 ## Logo

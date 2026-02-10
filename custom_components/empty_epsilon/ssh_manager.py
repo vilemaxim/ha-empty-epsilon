@@ -235,11 +235,20 @@ class SSHManager:
 
     async def deploy_hardware_ini(
         self,
-        ee_install_path: str,
         universe: int = DEFAULT_SACN_UNIVERSE,
         channels: int = DEFAULT_SACN_CHANNELS,
     ) -> bool:
-        """Generate hardware.ini and upload to EE server scripts directory."""
+        """Generate hardware.ini and upload to EE config dir (~/.emptyepsilon/)."""
+        status, out, err = await self.run_command("echo $HOME")
+        if status != 0:
+            _LOGGER.warning("Could not resolve remote HOME: %s %s", out, err)
+            return False
+        home = out.strip()
+        remote_dir = f"{home}/.emptyepsilon"
+        remote_path = f"{remote_dir}/hardware.ini"
+        mkdir_status, _, _ = await self.run_command(f"mkdir -p {remote_dir}")
+        if mkdir_status != 0:
+            _LOGGER.warning("Could not create %s on remote", remote_dir)
+            return False
         content = generate_hardware_ini(universe=universe, channels=channels)
-        remote_path = f"{ee_install_path.rstrip('/')}/scripts/hardware.ini"
         return await self.upload_string(content, remote_path)
