@@ -289,11 +289,20 @@ class EmptyEpsilonOptionsFlow(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Manage options."""
         if user_input is not None:
-            return self.async_create_entry(data=user_input)
+            # Options flow: merge with existing options, include ee_install_path
+            existing = self._config_entry.options or {}
+            new_options = {**existing, **user_input}
+            return self.async_create_entry(data=new_options)
 
         options = self._config_entry.options or {}
+        data = self._config_entry.data or {}
         schema = vol.Schema(
             {
+                vol.Optional(
+                    CONF_EE_INSTALL_PATH,
+                    default=options.get(CONF_EE_INSTALL_PATH)
+                    or data.get(CONF_EE_INSTALL_PATH, "/usr/local/bin"),
+                ): str,
                 vol.Optional(
                     CONF_POLL_INTERVAL,
                     default=options.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL),

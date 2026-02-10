@@ -29,6 +29,17 @@ A custom Home Assistant integration for [Empty Epsilon](https://daid.github.io/E
 - For server management (start/stop, scenario upload): SSH access to the EE server.
 - Home Assistant 2024.1 or newer.
 
+## Configuration
+
+To change integration settings (EE Install Path, poll interval, sACN universe, etc.):
+
+1. Go to **Settings** → **Devices & services**
+2. Find the **EmptyEpsilon** integration and click on it
+3. Open the **⋮** (three dots) menu on the integration card
+4. Select **Configure** or **Options** (label varies by Home Assistant version)
+5. Adjust **EE Install Path** (directory containing the EmptyEpsilon binary, e.g. `/usr/local/bin` for .deb installs) and other options
+6. Click **Submit**
+
 ## Logo
 
 The Empty Epsilon logo is included in `custom_components/empty_epsilon/images/` (icon.png, logo.png). To have it appear in the Home Assistant frontend (Settings → Integrations), submit the images to the [Home Assistant brands repository](https://github.com/home-assistant/brands) by adding `custom_integrations/empty_epsilon/` with `icon.png` and `logo.png`.

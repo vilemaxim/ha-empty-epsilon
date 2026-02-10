@@ -46,6 +46,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     data[CONF_POLL_INTERVAL] = options.get(CONF_POLL_INTERVAL, 10)
     data[CONF_SACN_UNIVERSE] = options.get(CONF_SACN_UNIVERSE, 2)
     data[CONF_ENABLE_EXEC_LUA] = options.get(CONF_ENABLE_EXEC_LUA, False)
+    if CONF_EE_INSTALL_PATH in options:
+        data[CONF_EE_INSTALL_PATH] = options[CONF_EE_INSTALL_PATH]
 
     # Start EE server via SSH before coordinator setup (proves we have full control)
     ssh = SSHManager(

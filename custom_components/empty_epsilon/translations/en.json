@@ -29,6 +29,7 @@
         "data": {
           "poll_interval": "HTTP poll interval (seconds)",
           "sacn_universe": "sACN universe",
+          "ee_install_path": "EE Install Path (directory containing EmptyEpsilon binary)",
           "enable_exec_lua": "Enable Execute Lua service"
         }
       }
