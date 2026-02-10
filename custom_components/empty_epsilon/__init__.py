@@ -71,7 +71,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     await coordinator.start_sacn()
 
     await hass.config_entries.async_forward_entry_setups(
-        config_entry, ["sensor", "binary_sensor", "switch"]
+        config_entry, ["sensor", "binary_sensor", "switch", "button"]
     )
 
     if not hass.data.get(DOMAIN + "_services"):
@@ -87,7 +87,7 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     if coordinator:
         coordinator.stop_sacn()
     unload_ok = await hass.config_entries.async_unload_platforms(
-        config_entry, ["sensor", "binary_sensor", "switch"]
+        config_entry, ["sensor", "binary_sensor", "switch", "button"]
     )
     if unload_ok and DOMAIN in hass.data:
         hass.data[DOMAIN].pop(config_entry.entry_id, None)

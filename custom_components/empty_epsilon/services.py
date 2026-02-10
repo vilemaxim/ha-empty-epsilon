@@ -129,6 +129,95 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         finally:
             await ssh.disconnect()
 
+    async def spawn_cpu_ship(call: ServiceCall) -> None:
+        coord = _get_coordinator(hass, call)
+        await coord.api.spawn_cpu_ship(
+            template=call.data.get("template", "Adder MK3"),
+            faction=call.data.get("faction", "Kraylor"),
+            x=float(call.data.get("x", 0)),
+            y=float(call.data.get("y", 0)),
+            order=call.data.get("order", "idle"),
+        )
+        await coord.async_request_refresh()
+
+    async def spawn_station(call: ServiceCall) -> None:
+        coord = _get_coordinator(hass, call)
+        await coord.api.spawn_station(
+            template=call.data.get("template", "Small Station"),
+            faction=call.data.get("faction", "Human Navy"),
+            x=float(call.data.get("x", 0)),
+            y=float(call.data.get("y", 0)),
+        )
+        await coord.async_request_refresh()
+
+    async def spawn_nebula(call: ServiceCall) -> None:
+        coord = _get_coordinator(hass, call)
+        await coord.api.spawn_nebula(
+            x=float(call.data.get("x", 0)),
+            y=float(call.data.get("y", 0)),
+        )
+        await coord.async_request_refresh()
+
+    async def spawn_asteroid(call: ServiceCall) -> None:
+        coord = _get_coordinator(hass, call)
+        await coord.api.spawn_asteroid(
+            x=float(call.data.get("x", 0)),
+            y=float(call.data.get("y", 0)),
+        )
+        await coord.async_request_refresh()
+
+    async def send_comms_message(call: ServiceCall) -> None:
+        coord = _get_coordinator(hass, call)
+        await coord.api.send_comms_message(
+            callsign=call.data["callsign"],
+            message=call.data["message"],
+        )
+        await coord.async_request_refresh()
+
+    async def modify_hull(call: ServiceCall) -> None:
+        coord = _get_coordinator(hass, call)
+        await coord.api.modify_hull(
+            callsign=call.data["callsign"],
+            value=float(call.data.get("value", 100)),
+        )
+        await coord.async_request_refresh()
+
+    async def modify_shields(call: ServiceCall) -> None:
+        coord = _get_coordinator(hass, call)
+        await coord.api.modify_shields(
+            callsign=call.data["callsign"],
+            front=float(call.data.get("front", 100)),
+            rear=float(call.data.get("rear", 100)),
+        )
+        await coord.async_request_refresh()
+
+    async def give_weapons(call: ServiceCall) -> None:
+        coord = _get_coordinator(hass, call)
+        await coord.api.give_weapons(
+            callsign=call.data["callsign"],
+            homing=int(call.data.get("homing", 0)),
+            nuke=int(call.data.get("nuke", 0)),
+            emp=int(call.data.get("emp", 0)),
+            mine=int(call.data.get("mine", 0)),
+            hvli=int(call.data.get("hvli", 0)),
+        )
+        await coord.async_request_refresh()
+
+    async def red_alert_all(call: ServiceCall) -> None:
+        coord = _get_coordinator(hass, call)
+        await coord.api.red_alert_all()
+        await coord.async_request_refresh()
+
+    async def resupply_all(call: ServiceCall) -> None:
+        coord = _get_coordinator(hass, call)
+        await coord.api.resupply_all()
+        await coord.async_request_refresh()
+
+    async def repair_all(call: ServiceCall) -> None:
+        coord = _get_coordinator(hass, call)
+        await coord.api.repair_all()
+        await coord.async_request_refresh()
+
     hass.services.async_register(
         DOMAIN,
         "global_message",
@@ -188,6 +277,131 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         DOMAIN,
         "stop_server",
         stop_server,
+        schema=vol.Schema({
+            vol.Optional("entity_id"): cv.entity_id,
+            vol.Optional("device_id"): str,
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "spawn_cpu_ship",
+        spawn_cpu_ship,
+        schema=vol.Schema({
+            vol.Optional("entity_id"): cv.entity_id,
+            vol.Optional("device_id"): str,
+            vol.Optional("template", default="Adder MK3"): str,
+            vol.Optional("faction", default="Kraylor"): str,
+            vol.Optional("x", default=0): vol.Coerce(float),
+            vol.Optional("y", default=0): vol.Coerce(float),
+            vol.Optional("order", default="idle"): vol.In(["idle", "roam"]),
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "spawn_station",
+        spawn_station,
+        schema=vol.Schema({
+            vol.Optional("entity_id"): cv.entity_id,
+            vol.Optional("device_id"): str,
+            vol.Optional("template", default="Small Station"): str,
+            vol.Optional("faction", default="Human Navy"): str,
+            vol.Optional("x", default=0): vol.Coerce(float),
+            vol.Optional("y", default=0): vol.Coerce(float),
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "spawn_nebula",
+        spawn_nebula,
+        schema=vol.Schema({
+            vol.Optional("entity_id"): cv.entity_id,
+            vol.Optional("device_id"): str,
+            vol.Optional("x", default=0): vol.Coerce(float),
+            vol.Optional("y", default=0): vol.Coerce(float),
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "spawn_asteroid",
+        spawn_asteroid,
+        schema=vol.Schema({
+            vol.Optional("entity_id"): cv.entity_id,
+            vol.Optional("device_id"): str,
+            vol.Optional("x", default=0): vol.Coerce(float),
+            vol.Optional("y", default=0): vol.Coerce(float),
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "send_comms_message",
+        send_comms_message,
+        schema=vol.Schema({
+            vol.Optional("entity_id"): cv.entity_id,
+            vol.Optional("device_id"): str,
+            vol.Required("callsign"): str,
+            vol.Required("message"): str,
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "modify_hull",
+        modify_hull,
+        schema=vol.Schema({
+            vol.Optional("entity_id"): cv.entity_id,
+            vol.Optional("device_id"): str,
+            vol.Required("callsign"): str,
+            vol.Optional("value", default=100): vol.Coerce(float),
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "modify_shields",
+        modify_shields,
+        schema=vol.Schema({
+            vol.Optional("entity_id"): cv.entity_id,
+            vol.Optional("device_id"): str,
+            vol.Required("callsign"): str,
+            vol.Optional("front", default=100): vol.Coerce(float),
+            vol.Optional("rear", default=100): vol.Coerce(float),
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "give_weapons",
+        give_weapons,
+        schema=vol.Schema({
+            vol.Optional("entity_id"): cv.entity_id,
+            vol.Optional("device_id"): str,
+            vol.Required("callsign"): str,
+            vol.Optional("homing", default=0): vol.Coerce(int),
+            vol.Optional("nuke", default=0): vol.Coerce(int),
+            vol.Optional("emp", default=0): vol.Coerce(int),
+            vol.Optional("mine", default=0): vol.Coerce(int),
+            vol.Optional("hvli", default=0): vol.Coerce(int),
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "red_alert_all",
+        red_alert_all,
+        schema=vol.Schema({
+            vol.Optional("entity_id"): cv.entity_id,
+            vol.Optional("device_id"): str,
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "resupply_all",
+        resupply_all,
+        schema=vol.Schema({
+            vol.Optional("entity_id"): cv.entity_id,
+            vol.Optional("device_id"): str,
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "repair_all",
+        repair_all,
         schema=vol.Schema({
             vol.Optional("entity_id"): cv.entity_id,
             vol.Optional("device_id"): str,

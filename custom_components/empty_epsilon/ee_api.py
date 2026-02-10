@@ -144,7 +144,121 @@ class EEAPIClient:
             f'PlayerSpaceship():setFaction("{f}"):setTemplate("{t}"):setCallSign("{c}"):setPosition({x},{y})'
         )
 
-Minor bug fixesService/    # --- Phase 2: Server-level and primary ship sensors ---
+    # --- Phase 5: Advanced GM controls ---
+
+    def _escape(self, s: str) -> str:
+        return (s or "").replace("\\", "\\\\").replace('"', '\\"')
+
+    async def spawn_cpu_ship(
+        self,
+        template: str = "Adder MK3",
+        faction: str = "Kraylor",
+        x: float = 0,
+        y: float = 0,
+        order: str = "idle",
+    ) -> None:
+        """Spawn an AI CpuShip. Order: idle, roam, attack (needs target)."""
+        t, f = self._escape(template or "Adder MK3"), self._escape(faction or "Kraylor")
+        base = f'CpuShip():setFaction("{f}"):setTemplate("{t}"):setPosition({x},{y})'
+        if order == "roam":
+            await self.exec_lua(base + ":orderRoaming()")
+        else:
+            await self.exec_lua(base + ":orderIdle()")
+
+    async def spawn_station(
+        self,
+        template: str = "Small Station",
+        faction: str = "Human Navy",
+        x: float = 0,
+        y: float = 0,
+    ) -> None:
+        """Spawn a SpaceStation."""
+        t, f = self._escape(template or "Small Station"), self._escape(faction or "Human Navy")
+        await self.exec_lua(
+            f'SpaceStation():setFaction("{f}"):setTemplate("{t}"):setPosition({x},{y})'
+        )
+
+    async def spawn_nebula(self, x: float = 0, y: float = 0) -> None:
+        """Spawn a nebula at position."""
+        await self.exec_lua(f"Nebula():setPosition({x},{y})")
+
+    async def spawn_asteroid(self, x: float = 0, y: float = 0) -> None:
+        """Spawn an asteroid at position."""
+        await self.exec_lua(f"Asteroid():setPosition({x},{y})")
+
+    async def send_comms_message(self, callsign: str, message: str) -> None:
+        """Send an incoming comms message to a player ship by callsign."""
+        c, m = self._escape(callsign), self._escape(message)
+        await self.exec_lua(
+            f'for i=0,99 do local s=getPlayerShip(i); if s and s:getCallSign()=="{c}" then '
+            f's:addCustomMessage("gm","{m}"); break end end'
+        )
+
+    async def modify_hull(self, callsign: str, value: float) -> None:
+        """Set hull percentage (0-100) for a player ship."""
+        c = self._escape(callsign)
+        v = max(0, min(100, float(value)))
+        await self.exec_lua(
+            f'for i=0,99 do local s=getPlayerShip(i); if s and s:getCallSign()=="{c}" then '
+            f's:setHull({v}); break end end'
+        )
+
+    async def modify_shields(self, callsign: str, front: float, rear: float) -> None:
+        """Set shield percentages (0-100) for a player ship."""
+        c = self._escape(callsign)
+        f, r = max(0, min(100, float(front))), max(0, min(100, float(rear)))
+        await self.exec_lua(
+            f'for i=0,99 do local s=getPlayerShip(i); if s and s:getCallSign()=="{c}" then '
+            f's:setShields({f},{r}); break end end'
+        )
+
+    async def give_weapons(
+        self,
+        callsign: str,
+        homing: int = 0,
+        nuke: int = 0,
+        emp: int = 0,
+        mine: int = 0,
+        hvli: int = 0,
+    ) -> None:
+        """Add ammo to a player ship. Pass counts to add."""
+        c = self._escape(callsign)
+        updates = []
+        for name, count in [("Homing", homing), ("Nuke", nuke), ("EMP", emp), ("Mine", mine), ("HVLI", hvli)]:
+            if count:
+                updates.append(f's:setWeaponStorage("{name}", (s:getWeaponStorage("{name}") or 0)+{count})')
+        if not updates:
+            return
+        lua = f'for i=0,99 do local s=getPlayerShip(i); if s and s:getCallSign()=="{c}" then {" ".join(updates)}; break end end'
+        await self.exec_lua(lua)
+
+    async def red_alert_all(self) -> None:
+        """Set all player ships to red alert."""
+        await self.exec_lua(
+            'for i=0,99 do local s=getPlayerShip(i); if s then s:setAlertLevel("red"); end end'
+        )
+
+    async def resupply_all(self) -> None:
+        """Refill energy and ammo for all player ships."""
+        await self.exec_lua(
+            "for i=0,99 do local s=getPlayerShip(i); if s then "
+            "s:setEnergyLevel(s:getEnergyLevelMax()); "
+            "for _,w in ipairs({'Homing','Nuke','EMP','Mine','HVLI'}) do "
+            "local m=s:getWeaponStorageMax(w); if m and m>0 then s:setWeaponStorage(w,m) end end "
+            "end end"
+        )
+
+    async def repair_all(self) -> None:
+        """Restore hull and shields for all player ships."""
+        await self.exec_lua(
+            "for i=0,99 do local s=getPlayerShip(i); if s then "
+            "s:setHull(100); "
+            "local fm=s:getShieldMax(0); local rm=s:getShieldMax(1); "
+            "s:setShields(fm and fm or 100, rm and rm or 100); "
+            "end end"
+        )
+
+    # --- Phase 2: Server-level and primary ship sensors ---
 
     async def get_active_scenario(self) -> str | None:
         """Return active scenario name or None."""

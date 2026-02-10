@@ -85,3 +85,154 @@ exec_lua:
       description: Lua code to execute (e.g. "return getScenarioTime()").
       required: true
       example: "return getScenarioTime()"
+
+spawn_cpu_ship:
+  name: Spawn CPU ship
+  description: Spawn an AI enemy ship (CpuShip).
+  fields:
+    template:
+      name: Template
+      required: false
+      default: "Adder MK3"
+    faction:
+      name: Faction
+      required: false
+      default: "Kraylor"
+    x:
+      name: X
+      required: false
+      default: 0
+    y:
+      name: Y
+      required: false
+      default: 0
+    order:
+      name: Order
+      required: false
+      default: "idle"
+
+spawn_station:
+  name: Spawn station
+  description: Spawn a space station.
+  fields:
+    template:
+      name: Template
+      required: false
+      default: "Small Station"
+    faction:
+      name: Faction
+      required: false
+      default: "Human Navy"
+    x:
+      name: X
+      required: false
+      default: 0
+    y:
+      name: Y
+      required: false
+      default: 0
+
+spawn_nebula:
+  name: Spawn nebula
+  description: Spawn a nebula at position.
+  fields:
+    x:
+      name: X
+      required: false
+      default: 0
+    y:
+      name: Y
+      required: false
+      default: 0
+
+spawn_asteroid:
+  name: Spawn asteroid
+  description: Spawn an asteroid at position.
+  fields:
+    x:
+      name: X
+      required: false
+      default: 0
+    y:
+      name: Y
+      required: false
+      default: 0
+
+send_comms_message:
+  name: Send comms message
+  description: Send an incoming comms message to a player ship.
+  fields:
+    callsign:
+      name: Callsign
+      required: true
+    message:
+      name: Message
+      required: true
+
+modify_hull:
+  name: Modify hull
+  description: Set hull percentage for a player ship.
+  fields:
+    callsign:
+      name: Callsign
+      required: true
+    value:
+      name: Value
+      required: false
+      default: 100
+
+modify_shields:
+  name: Modify shields
+  description: Set shield percentages for a player ship.
+  fields:
+    callsign:
+      name: Callsign
+      required: true
+    front:
+      name: Front
+      required: false
+      default: 100
+    rear:
+      name: Rear
+      required: false
+      default: 100
+
+give_weapons:
+  name: Give weapons
+  description: Add ammunition to a player ship.
+  fields:
+    callsign:
+      name: Callsign
+      required: true
+    homing:
+      name: Homing
+      required: false
+      default: 0
+    nuke:
+      name: Nuke
+      required: false
+      default: 0
+    emp:
+      name: EMP
+      required: false
+      default: 0
+    mine:
+      name: Mine
+      required: false
+      default: 0
+    hvli:
+      name: HVLI
+      required: false
+      default: 0
+
+red_alert_all:
+  name: Red alert all
+  description: Set all player ships to red alert.
+
+resupply_all:
+  name: Resupply all
+  description: Refill ammo and energy for all player ships.
+
+repair_all:
+  name: Repair all
+  description: Restore hull and shields for all player ships.

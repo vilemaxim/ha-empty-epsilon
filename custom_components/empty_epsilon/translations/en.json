@@ -69,6 +69,17 @@
         "name": "Pause"
       }
     },
+    "button": {
+      "red_alert_all": {
+        "name": "Red alert all"
+      },
+      "resupply_all": {
+        "name": "Resupply all"
+      },
+      "repair_all": {
+        "name": "Repair all"
+      }
+    },
     "sensor": {
       "game_status": {
         "name": "Game status"
