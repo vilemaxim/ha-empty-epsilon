@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import timedelta
 from typing import Any
 
@@ -46,6 +47,26 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._sacn: SACNListener | None = None
         universe = config.get(CONF_SACN_UNIVERSE, 2)
         self._sacn = SACNListener(universe=universe)
+        self._last_scenario_time: float | None = None
+        self._last_scenario_time_at: float = 0.0
+
+    def _infer_paused(self, scenario_time: float | None) -> bool:
+        """Infer paused when scenario time does not advance (EE getGameSpeed returns nil in headless)."""
+        now = time.monotonic()
+        if scenario_time is None:
+            self._last_scenario_time = None
+            return False
+        # Need at least 3s of real time to compare
+        if self._last_scenario_time is not None and (now - self._last_scenario_time_at) >= 3.0:
+            elapsed_real = now - self._last_scenario_time_at
+            delta_scenario = scenario_time - self._last_scenario_time
+            # If scenario advanced by less than 1s over 3s+ real time, consider paused
+            paused = delta_scenario < 1.0
+        else:
+            paused = False
+        self._last_scenario_time = scenario_time
+        self._last_scenario_time_at = now
+        return paused
 
     @property
     def api(self) -> EEAPIClient:
@@ -70,9 +91,11 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             data["http"]["server_reachable"] = True
 
             if has_game:
-                data["http"]["scenario_time"] = await self._api.get_scenario_time()
+                scenario_time = await self._api.get_scenario_time()
+                data["http"]["scenario_time"] = scenario_time
                 data["http"]["player_ship_count"] = await self._api.get_player_ship_count()
-                data["http"]["paused"] = await self._api.is_paused()
+                # EE getGameSpeed() returns nil in headless; infer pause from scenario time not advancing
+                data["http"]["paused"] = self._infer_paused(scenario_time)
                 victory = await self._api.get_victory_faction()
                 data["http"]["victory_faction"] = victory
 
@@ -100,6 +123,7 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 data["http"]["scenario_time"] = None
                 data["http"]["player_ship_count"] = 0
                 data["http"]["paused"] = False
+                self._last_scenario_time = None
                 data["http"]["victory_faction"] = None
                 data["http"]["active_scenario"] = None
                 data["http"]["total_objects"] = 0

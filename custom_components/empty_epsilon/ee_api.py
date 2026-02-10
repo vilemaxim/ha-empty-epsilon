@@ -100,10 +100,14 @@ class EEAPIClient:
     async def is_paused(self) -> bool:
         """Return True if game is paused (speed 0)."""
         try:
+            # Try global getGameSpeed() first; fallback to gameGlobalInfo:getGameSpeed()
             r = await self.exec_lua(
-                "local g=gameGlobalInfo; if g then return tostring(g:getGameSpeed()==0) end; return 'false'"
+                "if getGameSpeed then return tostring(getGameSpeed()==0) end; "
+                "local g=gameGlobalInfo; if g and g.getGameSpeed then return tostring(g:getGameSpeed()==0) end; "
+                "return 'false'"
             )
-            return r.strip().lower() == "true"
+            s = (r or "").strip().lower().strip('"\'')
+            return s == "true"
         except EEAPIError:
             return False
 
