@@ -194,20 +194,37 @@ class SSHManager:
         """
         Start EmptyEpsilon headless with httpserver on the EE host via SSH.
         Runs in background (nohup) so the SSH session returns immediately.
-        Returns True if the start command was sent successfully.
+        Uses login shell for proper environment. Logs to /tmp/emptyepsilon_start.log on failure.
+        Returns True if the start command was sent and a process appears to be running.
         """
         base = ee_install_path.rstrip("/")
-        # EE binary in install dir; headless + httpserver required for integration
+        ee_bin = f"{base}/EmptyEpsilon"
+        log_file = "/tmp/emptyepsilon_start.log"
+        # Use bash -l for login shell (full PATH, env); log output for debugging
         cmd = (
-            f"cd {base} && nohup ./EmptyEpsilon headless "
-            f"httpserver={ee_port} scenario={scenario} "
-            f"> /dev/null 2>&1 &"
+            f"nohup {ee_bin} headless httpserver={ee_port} scenario={scenario} "
+            f"> {log_file} 2>&1 &"
         )
-        status, out, err = await self.run_command(cmd, timeout=15.0)
+        status, out, err = await self.run_command(
+            f'bash -l -c "{cmd}"',
+            timeout=15.0,
+        )
         if status != 0:
             _LOGGER.warning(
                 "Start server command failed (status=%s): %s %s",
                 status, out.strip(), err.strip(),
+            )
+            return False
+        # Give EE a moment to start; verify process is running (nohup returns 0 immediately)
+        await asyncio.sleep(2)
+        check_status, check_out, _ = await self.run_command(
+            "pgrep -f EmptyEpsilon || true",
+            timeout=5.0,
+        )
+        if not check_out.strip():
+            _LOGGER.warning(
+                "EmptyEpsilon start command ran but no process found. Check %s on the EE server.",
+                log_file,
             )
             return False
         _LOGGER.info(
