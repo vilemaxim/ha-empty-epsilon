@@ -109,7 +109,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     async def start_server(call: ServiceCall) -> None:
         ssh, cfg = _get_ssh_and_config(hass, call)
-        install_path = cfg.get(CONF_EE_INSTALL_PATH, "/opt/EmptyEpsilon")
+        install_path = cfg.get(CONF_EE_INSTALL_PATH, "/usr/local/bin")
         ee_port = call.data.get("httpserver") or cfg.get(CONF_EE_PORT, 8080)
         scenario = call.data.get("scenario") or DEFAULT_INIT_SCENARIO
         try:

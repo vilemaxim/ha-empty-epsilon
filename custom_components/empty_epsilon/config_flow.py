@@ -67,7 +67,7 @@ EE_SERVER_SCHEMA = vol.Schema(
         vol.Optional(CONF_EE_PORT, default=DEFAULT_HTTP_PORT): vol.All(
             vol.Coerce(int), vol.Range(1, 65535)
         ),
-        vol.Optional(CONF_EE_INSTALL_PATH, default="/opt/EmptyEpsilon"): str,
+        vol.Optional(CONF_EE_INSTALL_PATH, default="/usr/local/bin"): str,
         vol.Optional(CONF_SCENARIO_PATH, default="/config/empty_epsilon/scenarios"): str,
     }
 )

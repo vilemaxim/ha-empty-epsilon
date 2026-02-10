@@ -57,7 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         known_hosts=data.get(CONF_SSH_KNOWN_HOSTS),
         skip_host_key_check=data.get(CONF_SSH_SKIP_HOST_KEY_CHECK, True),
     )
-    install_path = data.get(CONF_EE_INSTALL_PATH, "/opt/EmptyEpsilon")
+    install_path = data.get(CONF_EE_INSTALL_PATH, "/usr/local/bin")
     ee_port = data.get(CONF_EE_PORT, 8080)
     if await ssh.start_server(install_path, ee_port, DEFAULT_INIT_SCENARIO):
         _LOGGER.info("Waiting %ds for EmptyEpsilon to boot", EE_STARTUP_DELAY)
