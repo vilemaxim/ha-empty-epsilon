@@ -46,6 +46,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     """Set up EmptyEpsilon from a config entry."""
     data = dict(config_entry.data)
     options = config_entry.options or {}
+    # EE API always uses the same host as SSH
+    data[CONF_EE_HOST] = data.get(CONF_SSH_HOST, data.get(CONF_EE_HOST, "localhost"))
     data[CONF_POLL_INTERVAL] = options.get(CONF_POLL_INTERVAL, 10)
     data[CONF_SACN_UNIVERSE] = options.get(CONF_SACN_UNIVERSE, 2)
     if CONF_EE_INSTALL_PATH in options:

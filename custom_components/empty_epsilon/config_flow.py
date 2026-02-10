@@ -63,10 +63,9 @@ SSH_SCHEMA = vol.Schema(
     }
 )
 
-# Step 2: EE server configuration
+# Step 2: EE server configuration (EE Host = SSH Host, not asked)
 EE_SERVER_SCHEMA = vol.Schema(
     {
-        vol.Optional(CONF_EE_HOST, default=""): str,
         vol.Optional(CONF_EE_PORT, default=DEFAULT_HTTP_PORT): vol.All(
             vol.Coerce(int), vol.Range(1, 65535)
         ),
@@ -237,14 +236,13 @@ class EmptyEpsilonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data_schema=EE_SERVER_SCHEMA,
                 description_placeholders={
                     "info": "Configure EmptyEpsilon server. "
-                    "Leave EE Host empty to use the SSH host. "
+                    "HTTP API uses the same host as SSH. "
                     "The server does not need to be running now."
                 },
             )
 
         self._ee_data = dict(user_input)
-        if not self._ee_data.get(CONF_EE_HOST):
-            self._ee_data[CONF_EE_HOST] = self._ssh_data[CONF_SSH_HOST]
+        self._ee_data[CONF_EE_HOST] = self._ssh_data[CONF_SSH_HOST]
 
         http_error = await _validate_http(
             self.hass,
