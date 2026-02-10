@@ -9,6 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import (
+    CONF_EE_HOST,
     CONF_EE_INSTALL_PATH,
     CONF_EE_PORT,
     CONF_HEADLESS_INTERNET,

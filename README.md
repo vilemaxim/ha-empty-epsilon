@@ -21,7 +21,7 @@ A custom Home Assistant integration for [Empty Epsilon](https://daid.github.io/E
 ### Via HACS (recommended)
 
 1. In HACS, go to **Integrations** → **⋮** → **Custom repositories**.
-2. Add: `https://github.com/vilemaxim/ha-empty-epsilon` (use your actual GitHub username and repo name).
+2. Add: `https://github.com/vilemaximMinor fix/ha-empty-epsilon` (use your actual GitHub username and repo name).
 3. Search for **EmptyEpsilon** and install.
 4. Restart Home Assistant, then **Settings → Devices & services → Add integration** → **EmptyEpsilon**.
 
