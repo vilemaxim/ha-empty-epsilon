@@ -208,8 +208,10 @@ class SSHManager:
         Returns True if the server is running (existing or newly started).
         """
         await self._log_remote("start_server", "checking if EmptyEpsilon already running")
+        _cmd = "pgrep EmptyEpsilon || true"
+        await self._log_remote("start_server", f"about to run: {_cmd}")
         check_status, check_out, check_err = await self.run_command(
-            "pgrep -f EmptyEpsilon || true",
+            _cmd,
             timeout=5.0,
         )
         await self._log_remote("start_server", f"pgrep result: status={check_status} pids={check_out.strip() or '(none)'}")
@@ -222,13 +224,13 @@ class SSHManager:
         base = ee_install_path.rstrip("/")
         ee_bin = base if base.endswith("EmptyEpsilon") else f"{base}/EmptyEpsilon"
         # EE output and our actions all go to the general integration log
-        await self._log_remote("start_server", f"launching: {ee_bin} headless httpserver={ee_port} scenario={scenario}")
         cmd = (
             f"( echo '=== EmptyEpsilon process output ===' >> {EE_INTEGRATION_LOG}; "
             f"nohup {ee_bin} headless httpserver={ee_port} scenario={scenario} "
             f">> {EE_INTEGRATION_LOG} 2>&1 & )"
         )
         full_cmd = f'bash -l -c "{cmd}"'
+        await self._log_remote("start_server", f"about to run: {full_cmd}")
         _LOGGER.info("Running start command on %s:%s", self._host, self._port)
         status, out, err = await self.run_command(
             full_cmd,
@@ -243,8 +245,10 @@ class SSHManager:
             return False
         await asyncio.sleep(2)
         await self._log_remote("start_server", "verifying process started")
+        _verify_cmd = "pgrep EmptyEpsilon || true"
+        await self._log_remote("start_server", f"about to run: {_verify_cmd}")
         check_status, check_out, _ = await self.run_command(
-            "pgrep -f EmptyEpsilon || true",
+            _verify_cmd,
             timeout=5.0,
         )
         await self._log_remote("start_server", f"verify pgrep: status={check_status} pids={check_out.strip() or '(none)'}")
@@ -264,8 +268,8 @@ class SSHManager:
 
     async def stop_server(self) -> bool:
         """Stop EmptyEpsilon by killing the process on the EE host via SSH."""
-        await self._log_remote("stop_server", "pkill -f EmptyEpsilon")
-        cmd = "pkill -f EmptyEpsilon || true"
+        cmd = "pkill EmptyEpsilon || true"
+        await self._log_remote("stop_server", f"about to run: {cmd}")
         status, out, err = await self.run_command(cmd, timeout=15.0)
         await self._log_remote("stop_server", f"result: status={status} out={out.strip() or ''} err={err.strip() or ''}")
         if status != 0:
@@ -284,7 +288,9 @@ class SSHManager:
     ) -> bool:
         """Generate hardware.ini and upload to EE config dir (~/.emptyepsilon/)."""
         await self._log_remote("deploy_hardware_ini", "starting", "universe=" + str(universe))
-        status, out, err = await self.run_command("echo $HOME")
+        _cmd = "echo $HOME"
+        await self._log_remote("deploy_hardware_ini", f"about to run: {_cmd}")
+        status, out, err = await self.run_command(_cmd)
         await self._log_remote("deploy_hardware_ini", f"echo HOME -> status={status} home={out.strip() or err}")
         if status != 0:
             _LOGGER.warning("Could not resolve remote HOME: %s %s", out, err)
@@ -292,12 +298,15 @@ class SSHManager:
         home = out.strip()
         remote_dir = f"{home}/.emptyepsilon"
         remote_path = f"{remote_dir}/hardware.ini"
-        mkdir_status, _, _ = await self.run_command(f"mkdir -p {remote_dir}")
+        _mkdir_cmd = f"mkdir -p {remote_dir}"
+        await self._log_remote("deploy_hardware_ini", f"about to run: {_mkdir_cmd}")
+        mkdir_status, _, _ = await self.run_command(_mkdir_cmd)
         await self._log_remote("deploy_hardware_ini", f"mkdir -p {remote_dir} -> status={mkdir_status}")
         if mkdir_status != 0:
             _LOGGER.warning("Could not create %s on remote", remote_dir)
             return False
         content = generate_hardware_ini(universe=universe, channels=channels)
+        await self._log_remote("deploy_hardware_ini", f"about to upload (SFTP): {remote_path}")
         upload_ok = await self.upload_string(content, remote_path)
         await self._log_remote("deploy_hardware_ini", f"upload to {remote_path} -> ok={upload_ok}")
         return upload_ok
