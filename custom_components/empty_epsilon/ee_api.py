@@ -71,7 +71,7 @@ class EEAPIClient:
         """Return True if a game is running (scenario time and player ship exist)."""
         try:
             r = await self.exec_lua(
-                "return tostring(getScenarioTime() ~= nil and getPlayerShip(-1) ~= nil)"
+                "return tostring(getScenarioTime() ~= nil and getPlayerShip(0) ~= nil)"
             )
             return r.strip().lower() == "true"
         except EEAPIError:
@@ -284,7 +284,7 @@ class EEAPIClient:
         """Return count of hostile CpuShips (from first player's perspective)."""
         try:
             r = await self.exec_lua(
-                "local p=getPlayerShip(-1); if not p then return '0' end; "
+                "local p=getPlayerShip(0); if not p then return '0' end; "
                 "local n=0; for _,o in ipairs(getAllObjects() or {}) do "
                 "if o.typeName=='CpuShip' and p:isEnemy(o) then n=n+1 end end; return tostring(n)"
             )
@@ -296,7 +296,7 @@ class EEAPIClient:
         """Return count of stations friendly to first player."""
         try:
             r = await self.exec_lua(
-                "local p=getPlayerShip(-1); if not p then return '0' end; "
+                "local p=getPlayerShip(0); if not p then return '0' end; "
                 "local n=0; for _,o in ipairs(getAllObjects() or {}) do "
                 "if o.typeName=='SpaceStation' and p:isFriendly(o) then n=n+1 end end; return tostring(n)"
             )
@@ -320,7 +320,7 @@ class EEAPIClient:
         try:
             # Single exec for primary ship: callsign, type, sector, ammo, reputation
             r = await self.exec_lua(
-                "local s=getPlayerShip(-1); if not s then return '' end; "
+                "local s=getPlayerShip(0); if not s then return '' end; "
                 "local c=s:getCallSign() or ''; local t=s:getTypeName() or ''; "
                 "local sec=''; if s.getSectorName then sec=s:getSectorName() or '' end; "
                 "local h=s:getWeaponStorage('Homing') or 0; local n=s:getWeaponStorage('Nuke') or 0; "
