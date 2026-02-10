@@ -152,6 +152,10 @@ class SSHManager:
             self._conn = None
             return -1, "", str(e)
 
+    async def _clear_integration_log(self) -> None:
+        """Clear the integration log on the EE server (fresh log for each run)."""
+        await self.run_command(f"> {EE_INTEGRATION_LOG}", timeout=5.0)
+
     async def _log_remote(self, action: str, message: str, status: str | None = None) -> None:
         """Append an action/result line to the integration log on the EE server."""
         line = f"{action}: {message}"
@@ -201,7 +205,7 @@ class SSHManager:
         ee_port: int,
         scenario: str = DEFAULT_INIT_SCENARIO,
         headless_name: str = "EmptyEpsilon",
-        headless_internet: bool = True,
+        headless_internet: bool = False,
     ) -> bool:
         """
         Start EmptyEpsilon headless with httpserver on the EE host via SSH.
@@ -276,6 +280,7 @@ class SSHManager:
 
     async def stop_server(self) -> bool:
         """Stop EmptyEpsilon by killing the process on the EE host via SSH."""
+        await self._clear_integration_log()
         cmd = "pkill EmptyEpsilon || true"
         await self._log_remote("stop_server", f"about to run: {cmd}")
         status, out, err = await self.run_command(cmd, timeout=15.0)
@@ -295,6 +300,7 @@ class SSHManager:
         channels: int = DEFAULT_SACN_CHANNELS,
     ) -> bool:
         """Generate hardware.ini and upload to EE config dir (~/.emptyepsilon/)."""
+        await self._clear_integration_log()
         await self._log_remote("deploy_hardware_ini", "starting", "universe=" + str(universe))
         _cmd = "echo $HOME"
         await self._log_remote("deploy_hardware_ini", f"about to run: {_cmd}")
@@ -324,7 +330,7 @@ class SSHManager:
         scenario: str,
         ee_port: int,
         headless_name: str = "EmptyEpsilon",
-        headless_internet: bool = True,
+        headless_internet: bool = False,
     ) -> bool:
         """
         Deploy or update ~/.emptyepsilon/options.ini for headless server.
@@ -341,11 +347,12 @@ class SSHManager:
         home = out.strip()
         remote_dir = f"{home}/.emptyepsilon"
         options_path = f"{remote_dir}/options.ini"
-        _mkdir_cmd = f"mkdir -p {remote_dir}"
-        await self._log_remote("deploy_options_ini", f"about to run: {_mkdir_cmd}")
-        mkdir_status, _, _ = await self.run_command(_mkdir_cmd)
-        if mkdir_status != 0:
-            return False
+        for d in (remote_dir, f"{home}/logs"):
+            _mkdir_cmd = f"mkdir -p {d}"
+            await self._log_remote("deploy_options_ini", f"about to run: {_mkdir_cmd}")
+            mkdir_status, _, _ = await self.run_command(_mkdir_cmd)
+            if mkdir_status != 0:
+                return False
 
         our_keys = {
             "headless": scenario,

@@ -18,10 +18,12 @@ from .const import (
     CONF_ENABLE_EXEC_LUA,
     CONF_HEADLESS_INTERNET,
     CONF_HEADLESS_NAME,
+    CONF_SCENARIO,
     CONF_POLL_INTERVAL,
     CONF_SACN_UNIVERSE,
     CONF_SCENARIO_PATH,
     CONF_SSH_HOST,
+    DEFAULT_INIT_SCENARIO,
     CONF_SSH_KEY,
     CONF_SSH_KNOWN_HOSTS,
     CONF_SSH_PASSWORD,
@@ -323,8 +325,12 @@ class EmptyEpsilonOptionsFlow(config_entries.OptionsFlow):
                 ): str,
                 vol.Optional(
                     CONF_HEADLESS_INTERNET,
-                    default=options.get(CONF_HEADLESS_INTERNET, True),
+                    default=options.get(CONF_HEADLESS_INTERNET, False),
                 ): bool,
+                vol.Optional(
+                    CONF_SCENARIO,
+                    default=options.get(CONF_SCENARIO, DEFAULT_INIT_SCENARIO),
+                ): str,
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)

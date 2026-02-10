@@ -33,6 +33,7 @@ CONF_SCENARIO_PATH = "scenario_path"
 CONF_ENABLE_EXEC_LUA = "enable_exec_lua"
 CONF_HEADLESS_NAME = "headless_name"
 CONF_HEADLESS_INTERNET = "headless_internet"
+CONF_SCENARIO = "scenario"
 
 # sACN channel mapping (channel number 1-based -> key in payload)
 # Used by sacn_listener to decode and by hardware.ini generator to build config.
@@ -79,5 +80,5 @@ GAME_STATUS_GAME_OVER_DEFEAT = "game_over_defeat"
 # HTTP API
 EE_EXEC_PATH = "/exec.lua"
 
-# Simplest built-in EE scenario for init start-server (proves we have full control)
-DEFAULT_INIT_SCENARIO = "scenario_jump_00.lua"
+# Default scenario (built-in EE scenario filename in scripts/)
+DEFAULT_INIT_SCENARIO = "scenario_01_waves.lua"

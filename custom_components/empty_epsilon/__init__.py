@@ -14,6 +14,7 @@ from .const import (
     CONF_EE_PORT,
     CONF_HEADLESS_INTERNET,
     CONF_HEADLESS_NAME,
+    CONF_SCENARIO,
     CONF_POLL_INTERVAL,
     CONF_SACN_UNIVERSE,
     CONF_SSH_HOST,
@@ -52,7 +53,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     if CONF_EE_INSTALL_PATH in options:
         data[CONF_EE_INSTALL_PATH] = options[CONF_EE_INSTALL_PATH]
     data[CONF_HEADLESS_NAME] = options.get(CONF_HEADLESS_NAME, "EmptyEpsilon")
-    data[CONF_HEADLESS_INTERNET] = options.get(CONF_HEADLESS_INTERNET, True)
+    data[CONF_HEADLESS_INTERNET] = options.get(CONF_HEADLESS_INTERNET, False)
+    data[CONF_SCENARIO] = options.get(CONF_SCENARIO, DEFAULT_INIT_SCENARIO)
 
     # Auto-start EE only on first setup (not on HA restart)
     if not options.get(OPTION_HAS_AUTO_STARTED, False):
@@ -70,9 +72,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         sacn_universe = data.get(CONF_SACN_UNIVERSE, 2)
         await ssh.deploy_hardware_ini(universe=sacn_universe)
         headless_name = data.get(CONF_HEADLESS_NAME, "EmptyEpsilon")
-        headless_internet = data.get(CONF_HEADLESS_INTERNET, True)
+        headless_internet = data.get(CONF_HEADLESS_INTERNET, False)
+        scenario = data.get(CONF_SCENARIO, DEFAULT_INIT_SCENARIO)
         if await ssh.start_server(
-            install_path, ee_port, DEFAULT_INIT_SCENARIO,
+            install_path, ee_port, scenario,
             headless_name=headless_name,
             headless_internet=headless_internet,
         ):
