@@ -215,7 +215,7 @@ class EEAPIClient:
     async def give_weapons(
         self,
         callsign: str,
-        homing: int = 0,Fixing default senario error
+        homing: int = 0,
         nuke: int = 0,
         emp: int = 0,
         mine: int = 0,
