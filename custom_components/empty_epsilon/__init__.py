@@ -59,6 +59,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     )
     install_path = data.get(CONF_EE_INSTALL_PATH, "/usr/local/bin")
     ee_port = data.get(CONF_EE_PORT, 8080)
+    sacn_universe = data.get(CONF_SACN_UNIVERSE, 2)
+    await ssh.deploy_hardware_ini(universe=sacn_universe)
     if await ssh.start_server(install_path, ee_port, DEFAULT_INIT_SCENARIO):
         _LOGGER.info("Waiting %ds for EmptyEpsilon to boot", EE_STARTUP_DELAY)
         await asyncio.sleep(EE_STARTUP_DELAY)

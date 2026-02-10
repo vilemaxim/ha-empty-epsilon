@@ -15,6 +15,7 @@ from .const import (
     CONF_EE_INSTALL_PATH,
     CONF_EE_PORT,
     CONF_ENABLE_EXEC_LUA,
+    CONF_SACN_UNIVERSE,
     CONF_SSH_HOST,
     CONF_SSH_KEY,
     CONF_SSH_KNOWN_HOSTS,
@@ -112,7 +113,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         install_path = cfg.get(CONF_EE_INSTALL_PATH, "/usr/local/bin")
         ee_port = call.data.get("httpserver") or cfg.get(CONF_EE_PORT, 8080)
         scenario = call.data.get("scenario") or DEFAULT_INIT_SCENARIO
+        sacn_universe = cfg.get(CONF_SACN_UNIVERSE, 2)
         try:
+            await ssh.deploy_hardware_ini(universe=sacn_universe)
             ok = await ssh.start_server(install_path, ee_port, scenario)
             if ok:
                 coord = _get_coordinator(hass, call)
