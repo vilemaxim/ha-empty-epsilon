@@ -30,8 +30,9 @@ from .ssh_manager import SSHManager
 
 _LOGGER = logging.getLogger(__name__)
 
-# Seconds to wait for EE to boot before first coordinator refresh
 EE_STARTUP_DELAY = 8
+# Option key: True after we've auto-started once (so we skip on HA restart)
+OPTION_HAS_AUTO_STARTED = "has_auto_started_once"
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
@@ -49,24 +50,29 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     if CONF_EE_INSTALL_PATH in options:
         data[CONF_EE_INSTALL_PATH] = options[CONF_EE_INSTALL_PATH]
 
-    # Start EE server via SSH before coordinator setup (proves we have full control)
-    ssh = SSHManager(
-        host=data[CONF_SSH_HOST],
-        port=data.get(CONF_SSH_PORT, 22),
-        username=data[CONF_SSH_USERNAME],
-        password=data.get(CONF_SSH_PASSWORD) or None,
-        key_filename=(data.get(CONF_SSH_KEY) or "").strip() or None,
-        known_hosts=data.get(CONF_SSH_KNOWN_HOSTS),
-        skip_host_key_check=data.get(CONF_SSH_SKIP_HOST_KEY_CHECK, True),
-    )
-    install_path = data.get(CONF_EE_INSTALL_PATH, "/usr/local/bin")
-    ee_port = data.get(CONF_EE_PORT, 8080)
-    sacn_universe = data.get(CONF_SACN_UNIVERSE, 2)
-    await ssh.deploy_hardware_ini(universe=sacn_universe)
-    if await ssh.start_server(install_path, ee_port, DEFAULT_INIT_SCENARIO):
-        _LOGGER.info("Waiting %ds for EmptyEpsilon to boot", EE_STARTUP_DELAY)
-        await asyncio.sleep(EE_STARTUP_DELAY)
-    await ssh.disconnect()
+    # Auto-start EE only on first setup (not on HA restart)
+    if not options.get(OPTION_HAS_AUTO_STARTED, False):
+        ssh = SSHManager(
+            host=data[CONF_SSH_HOST],
+            port=data.get(CONF_SSH_PORT, 22),
+            username=data[CONF_SSH_USERNAME],
+            password=data.get(CONF_SSH_PASSWORD) or None,
+            key_filename=(data.get(CONF_SSH_KEY) or "").strip() or None,
+            known_hosts=data.get(CONF_SSH_KNOWN_HOSTS),
+            skip_host_key_check=data.get(CONF_SSH_SKIP_HOST_KEY_CHECK, True),
+        )
+        install_path = data.get(CONF_EE_INSTALL_PATH, "/usr/local/bin")
+        ee_port = data.get(CONF_EE_PORT, 8080)
+        sacn_universe = data.get(CONF_SACN_UNIVERSE, 2)
+        await ssh.deploy_hardware_ini(universe=sacn_universe)
+        if await ssh.start_server(install_path, ee_port, DEFAULT_INIT_SCENARIO):
+            _LOGGER.info("Waiting %ds for EmptyEpsilon to boot", EE_STARTUP_DELAY)
+            await asyncio.sleep(EE_STARTUP_DELAY)
+        await ssh.disconnect()
+        hass.config_entries.async_update_entry(
+            config_entry,
+            options={**options, OPTION_HAS_AUTO_STARTED: True},
+        )
 
     coordinator = EmptyEpsilonCoordinator(hass, data)
     await coordinator.async_config_entry_first_refresh()

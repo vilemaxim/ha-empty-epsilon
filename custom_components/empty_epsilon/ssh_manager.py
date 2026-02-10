@@ -8,8 +8,6 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-# Import deferred to connect() - asyncssh does blocking I/O on import
-
 from .const import (
     DEFAULT_INIT_SCENARIO,
     DEFAULT_SACN_CHANNELS,
@@ -91,7 +89,6 @@ class SSHManager:
             kwargs["client_keys"] = [self._key_filename]
         if self._password:
             kwargs["password"] = self._password
-        # Host key verification: known_hosts object, or skip if requested
         if self._skip_host_key_check:
             kwargs["known_hosts"] = None
         elif known_hosts_obj is not None:
@@ -100,7 +97,6 @@ class SSHManager:
 
     async def connect(self) -> bool:
         """Establish SSH connection. Returns True on success."""
-        # Import asyncssh in a thread - it does blocking I/O (open, glob, scandir) on load
         import sys
         if "asyncssh" not in sys.modules:
             await asyncio.to_thread(__import__, "asyncssh")
@@ -110,7 +106,6 @@ class SSHManager:
         if not self._skip_host_key_check and self._known_hosts:
             path = Path(self._known_hosts)
             if path.exists():
-                # Load file in executor to avoid blocking the event loop
                 content = await asyncio.to_thread(path.read_text, encoding="utf-8")
                 known_hosts_obj = asyncssh.import_known_hosts(content)
 
@@ -193,15 +188,20 @@ class SSHManager:
     ) -> bool:
         """
         Start EmptyEpsilon headless with httpserver on the EE host via SSH.
-        Runs in background (nohup) so the SSH session returns immediately.
-        Uses login shell for proper environment. Logs to /tmp/emptyepsilon_start.log on failure.
-        Returns True if the start command was sent and a process appears to be running.
+        Skips if already running. Uses login shell. Logs to /tmp/emptyepsilon_start.log.
+        Returns True if the server is running (existing or newly started).
         """
+        check_status, check_out, _ = await self.run_command(
+            "pgrep -f EmptyEpsilon || true",
+            timeout=5.0,
+        )
+        if check_out.strip():
+            _LOGGER.info("EmptyEpsilon already running, skipping start")
+            return True
+
         base = ee_install_path.rstrip("/")
-        # Accept directory (/usr/local/bin) or full path (/usr/local/bin/EmptyEpsilon)
         ee_bin = base if base.endswith("EmptyEpsilon") else f"{base}/EmptyEpsilon"
         log_file = "/tmp/emptyepsilon_start.log"
-        # Use bash -l for login shell (full PATH, env); log output for debugging
         cmd = (
             f"nohup {ee_bin} headless httpserver={ee_port} scenario={scenario} "
             f"> {log_file} 2>&1 &"
@@ -216,7 +216,6 @@ class SSHManager:
                 status, out.strip(), err.strip(),
             )
             return False
-        # Give EE a moment to start; verify process is running (nohup returns 0 immediately)
         await asyncio.sleep(2)
         check_status, check_out, _ = await self.run_command(
             "pgrep -f EmptyEpsilon || true",
@@ -235,11 +234,7 @@ class SSHManager:
         return True
 
     async def stop_server(self) -> bool:
-        """
-        Stop EmptyEpsilon by killing the process on the EE host via SSH.
-        Returns True if the kill command was sent successfully.
-        """
-        # pkill matches process name; EmptyEpsilon is the binary name
+        """Stop EmptyEpsilon by killing the process on the EE host via SSH."""
         cmd = "pkill -f EmptyEpsilon || true"
         status, out, err = await self.run_command(cmd, timeout=15.0)
         if status != 0:
