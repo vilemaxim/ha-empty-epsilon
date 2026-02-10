@@ -15,6 +15,8 @@ from .const import (
     CONF_EE_INSTALL_PATH,
     CONF_EE_PORT,
     CONF_ENABLE_EXEC_LUA,
+    CONF_HEADLESS_INTERNET,
+    CONF_HEADLESS_NAME,
     CONF_SACN_UNIVERSE,
     CONF_SSH_HOST,
     CONF_SSH_KEY,
@@ -115,6 +117,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             ee_port = call.data.get("httpserver") or cfg.get(CONF_EE_PORT, 8080)
             scenario = call.data.get("scenario") or DEFAULT_INIT_SCENARIO
             sacn_universe = cfg.get(CONF_SACN_UNIVERSE, 2)
+            headless_name = cfg.get(CONF_HEADLESS_NAME, "EmptyEpsilon")
+            headless_internet = cfg.get(CONF_HEADLESS_INTERNET, True)
             _LOGGER.info(
                 "start_server: host=%s install_path=%s port=%s scenario=%s",
                 cfg.get(CONF_SSH_HOST), install_path, ee_port, scenario,
@@ -122,7 +126,11 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             try:
                 deploy_ok = await ssh.deploy_hardware_ini(universe=sacn_universe)
                 _LOGGER.info("start_server: deploy_hardware_ini=%s", deploy_ok)
-                ok = await ssh.start_server(install_path, ee_port, scenario)
+                ok = await ssh.start_server(
+                    install_path, ee_port, scenario,
+                    headless_name=headless_name,
+                    headless_internet=headless_internet,
+                )
                 _LOGGER.info("start_server: start_server result=%s", ok)
                 if ok:
                     coord = _get_coordinator(hass, call)

@@ -31,6 +31,8 @@ CONF_SACN_UNIVERSE = "sacn_universe"
 CONF_EE_INSTALL_PATH = "ee_install_path"
 CONF_SCENARIO_PATH = "scenario_path"
 CONF_ENABLE_EXEC_LUA = "enable_exec_lua"
+CONF_HEADLESS_NAME = "headless_name"
+CONF_HEADLESS_INTERNET = "headless_internet"
 
 # sACN channel mapping (channel number 1-based -> key in payload)
 # Used by sacn_listener to decode and by hardware.ini generator to build config.

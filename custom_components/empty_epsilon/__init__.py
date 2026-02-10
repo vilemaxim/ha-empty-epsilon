@@ -12,6 +12,8 @@ from .const import (
     CONF_ENABLE_EXEC_LUA,
     CONF_EE_INSTALL_PATH,
     CONF_EE_PORT,
+    CONF_HEADLESS_INTERNET,
+    CONF_HEADLESS_NAME,
     CONF_POLL_INTERVAL,
     CONF_SACN_UNIVERSE,
     CONF_SSH_HOST,
@@ -49,6 +51,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     data[CONF_ENABLE_EXEC_LUA] = options.get(CONF_ENABLE_EXEC_LUA, False)
     if CONF_EE_INSTALL_PATH in options:
         data[CONF_EE_INSTALL_PATH] = options[CONF_EE_INSTALL_PATH]
+    data[CONF_HEADLESS_NAME] = options.get(CONF_HEADLESS_NAME, "EmptyEpsilon")
+    data[CONF_HEADLESS_INTERNET] = options.get(CONF_HEADLESS_INTERNET, True)
 
     # Auto-start EE only on first setup (not on HA restart)
     if not options.get(OPTION_HAS_AUTO_STARTED, False):
@@ -65,7 +69,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         ee_port = data.get(CONF_EE_PORT, 8080)
         sacn_universe = data.get(CONF_SACN_UNIVERSE, 2)
         await ssh.deploy_hardware_ini(universe=sacn_universe)
-        if await ssh.start_server(install_path, ee_port, DEFAULT_INIT_SCENARIO):
+        headless_name = data.get(CONF_HEADLESS_NAME, "EmptyEpsilon")
+        headless_internet = data.get(CONF_HEADLESS_INTERNET, True)
+        if await ssh.start_server(
+            install_path, ee_port, DEFAULT_INIT_SCENARIO,
+            headless_name=headless_name,
+            headless_internet=headless_internet,
+        ):
             _LOGGER.info("Waiting %ds for EmptyEpsilon to boot", EE_STARTUP_DELAY)
             await asyncio.sleep(EE_STARTUP_DELAY)
         await ssh.disconnect()

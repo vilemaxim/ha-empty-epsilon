@@ -200,6 +200,8 @@ class SSHManager:
         ee_install_path: str,
         ee_port: int,
         scenario: str = DEFAULT_INIT_SCENARIO,
+        headless_name: str = "EmptyEpsilon",
+        headless_internet: bool = True,
     ) -> bool:
         """
         Start EmptyEpsilon headless with httpserver on the EE host via SSH.
@@ -223,11 +225,17 @@ class SSHManager:
 
         base = ee_install_path.rstrip("/")
         ee_bin = base if base.endswith("EmptyEpsilon") else f"{base}/EmptyEpsilon"
-        # EE output and our actions all go to the general integration log
+        # Deploy options.ini so EE reads headless config (name, internet, etc.)
+        await self.deploy_options_ini(
+            scenario=scenario,
+            ee_port=ee_port,
+            headless_name=headless_name,
+            headless_internet=headless_internet,
+        )
+        # EE reads options.ini; no need for command-line args
         cmd = (
             f"( echo '=== EmptyEpsilon process output ===' >> {EE_INTEGRATION_LOG}; "
-            f"nohup {ee_bin} headless httpserver={ee_port} scenario={scenario} "
-            f">> {EE_INTEGRATION_LOG} 2>&1 & )"
+            f"nohup {ee_bin} >> {EE_INTEGRATION_LOG} 2>&1 & )"
         )
         full_cmd = f'bash -l -c "{cmd}"'
         await self._log_remote("start_server", f"about to run: {full_cmd}")
@@ -310,3 +318,58 @@ class SSHManager:
         upload_ok = await self.upload_string(content, remote_path)
         await self._log_remote("deploy_hardware_ini", f"upload to {remote_path} -> ok={upload_ok}")
         return upload_ok
+
+    async def deploy_options_ini(
+        self,
+        scenario: str,
+        ee_port: int,
+        headless_name: str = "EmptyEpsilon",
+        headless_internet: bool = True,
+    ) -> bool:
+        """
+        Deploy or update ~/.emptyepsilon/options.ini for headless server.
+        Merges with existing file to preserve user preferences.
+        See https://github.com/daid/EmptyEpsilon/wiki/Headless-Dedicated-Server
+        """
+        await self._log_remote("deploy_options_ini", "starting")
+        _cmd = "echo $HOME"
+        await self._log_remote("deploy_options_ini", f"about to run: {_cmd}")
+        status, out, err = await self.run_command(_cmd)
+        if status != 0:
+            _LOGGER.warning("Could not resolve remote HOME: %s %s", out, err)
+            return False
+        home = out.strip()
+        remote_dir = f"{home}/.emptyepsilon"
+        options_path = f"{remote_dir}/options.ini"
+        _mkdir_cmd = f"mkdir -p {remote_dir}"
+        await self._log_remote("deploy_options_ini", f"about to run: {_mkdir_cmd}")
+        mkdir_status, _, _ = await self.run_command(_mkdir_cmd)
+        if mkdir_status != 0:
+            return False
+
+        our_keys = {
+            "headless": scenario,
+            "httpserver": str(ee_port),
+            "headless_name": headless_name,
+            "headless_internet": "1" if headless_internet else "0",
+        }
+        await self._log_remote("deploy_options_ini", f"options: {our_keys}")
+
+        status, existing, _ = await self.run_command(
+            f"test -f {options_path} && cat {options_path} || echo ''",
+            timeout=5.0,
+        )
+        lines = []
+        if existing.strip():
+            for line in existing.strip().split("\n"):
+                if "=" in line:
+                    key = line.split("=")[0].strip()
+                    if key not in our_keys:
+                        lines.append(line.rstrip())
+        for k, v in our_keys.items():
+            lines.append(f"{k}={v}")
+        content = "\n".join(lines) + "\n"
+        await self._log_remote("deploy_options_ini", f"about to upload: {options_path}")
+        ok = await self.upload_string(content, options_path)
+        await self._log_remote("deploy_options_ini", f"upload result: ok={ok}")
+        return ok

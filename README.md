@@ -25,7 +25,7 @@ A custom Home Assistant integration for [Empty Epsilon](https://daid.github.io/E
 
 ## Requirements
 
-- Empty Epsilon server with HTTP API enabled (`httpserver=PORT` on the command line). The EE server is expected to be an Ubuntu system with the latest Empty Epsilon installed via the official `.deb` package (typically at `/usr/local/bin/EmptyEpsilon`).
+- Empty Epsilon server with HTTP API enabled. The integration deploys `options.ini` and `hardware.ini` to `~/.emptyepsilon/` on the EE host. The EE server is expected to be an Ubuntu system with the latest Empty Epsilon installed via the official `.deb` package (typically at `/usr/local/bin/EmptyEpsilon`). For game clients to connect, open port **35666** (TCP) on your firewall per the [Headless Dedicated Server](https://github.com/daid/EmptyEpsilon/wiki/Headless-Dedicated-Server) guide.
 - For server management (start/stop, scenario upload): SSH access to the EE server.
 - Home Assistant 2024.1 or newer.
 

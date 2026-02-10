@@ -16,6 +16,8 @@ from .const import (
     CONF_EE_INSTALL_PATH,
     CONF_EE_PORT,
     CONF_ENABLE_EXEC_LUA,
+    CONF_HEADLESS_INTERNET,
+    CONF_HEADLESS_NAME,
     CONF_POLL_INTERVAL,
     CONF_SACN_UNIVERSE,
     CONF_SCENARIO_PATH,
@@ -314,6 +316,14 @@ class EmptyEpsilonOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_ENABLE_EXEC_LUA,
                     default=options.get(CONF_ENABLE_EXEC_LUA, False),
+                ): bool,
+                vol.Optional(
+                    CONF_HEADLESS_NAME,
+                    default=options.get(CONF_HEADLESS_NAME, "EmptyEpsilon"),
+                ): str,
+                vol.Optional(
+                    CONF_HEADLESS_INTERNET,
+                    default=options.get(CONF_HEADLESS_INTERNET, True),
                 ): bool,
             }
         )
