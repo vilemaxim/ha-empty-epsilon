@@ -19,6 +19,9 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# General integration log on the EE server: all actions and results
+EE_INTEGRATION_LOG = "/tmp/emptyepsilon_integration.log"
+
 
 def generate_hardware_ini(
     universe: int = DEFAULT_SACN_UNIVERSE,
@@ -149,6 +152,18 @@ class SSHManager:
             self._conn = None
             return -1, "", str(e)
 
+    async def _log_remote(self, action: str, message: str, status: str | None = None) -> None:
+        """Append an action/result line to the integration log on the EE server."""
+        line = f"{action}: {message}"
+        if status is not None:
+            line += f" [status={status}]"
+        # Use printf to avoid shell interpretation of message content
+        escaped = line.replace("'", "'\"'\"'")
+        await self.run_command(
+            f"printf '%s [HA] %s\\n' \"$(date -Iseconds 2>/dev/null || date)\" '{escaped}' >> {EE_INTEGRATION_LOG}",
+            timeout=5.0,
+        )
+
     async def upload_string(
         self,
         content: str,
@@ -188,32 +203,38 @@ class SSHManager:
     ) -> bool:
         """
         Start EmptyEpsilon headless with httpserver on the EE host via SSH.
-        Skips if already running. Uses login shell. Logs to /tmp/emptyepsilon_start.log.
+        Skips if already running. Uses login shell.
+        All actions and EE output go to /tmp/emptyepsilon_integration.log on the EE server.
         Returns True if the server is running (existing or newly started).
         """
+        await self._log_remote("start_server", "checking if EmptyEpsilon already running")
         check_status, check_out, check_err = await self.run_command(
             "pgrep -f EmptyEpsilon || true",
             timeout=5.0,
         )
+        await self._log_remote("start_server", f"pgrep result: status={check_status} pids={check_out.strip() or '(none)'}")
         _LOGGER.debug("pgrep check: status=%s out=%r err=%r", check_status, check_out, check_err)
         if check_out.strip():
             _LOGGER.info("EmptyEpsilon already running, skipping start")
+            await self._log_remote("start_server", "skipped - already running")
             return True
 
         base = ee_install_path.rstrip("/")
         ee_bin = base if base.endswith("EmptyEpsilon") else f"{base}/EmptyEpsilon"
-        log_file = "/tmp/emptyepsilon_start.log"
+        # EE output and our actions all go to the general integration log
+        await self._log_remote("start_server", f"launching: {ee_bin} headless httpserver={ee_port} scenario={scenario}")
         cmd = (
+            f"( echo '=== EmptyEpsilon process output ===' >> {EE_INTEGRATION_LOG}; "
             f"nohup {ee_bin} headless httpserver={ee_port} scenario={scenario} "
-            f"> {log_file} 2>&1 &"
+            f">> {EE_INTEGRATION_LOG} 2>&1 & )"
         )
         full_cmd = f'bash -l -c "{cmd}"'
-        _LOGGER.info("Running start command on %s:%s: %s", self._host, self._port, full_cmd)
+        _LOGGER.info("Running start command on %s:%s", self._host, self._port)
         status, out, err = await self.run_command(
             full_cmd,
             timeout=15.0,
         )
-        _LOGGER.info("Start command result: status=%s stdout=%r stderr=%r", status, out, err)
+        await self._log_remote("start_server", f"nohup launched: status={status} stdout={out[:100] if out else ''} stderr={err[:100] if err else ''}")
         if status != 0:
             _LOGGER.warning(
                 "Start server command failed (status=%s): %s %s",
@@ -221,26 +242,32 @@ class SSHManager:
             )
             return False
         await asyncio.sleep(2)
+        await self._log_remote("start_server", "verifying process started")
         check_status, check_out, _ = await self.run_command(
             "pgrep -f EmptyEpsilon || true",
             timeout=5.0,
         )
+        await self._log_remote("start_server", f"verify pgrep: status={check_status} pids={check_out.strip() or '(none)'}")
         if not check_out.strip():
             _LOGGER.warning(
                 "EmptyEpsilon start command ran but no process found. Check %s on the EE server.",
-                log_file,
+                EE_INTEGRATION_LOG,
             )
+            await self._log_remote("start_server", "FAILED - no process found after start")
             return False
         _LOGGER.info(
             "EmptyEpsilon start sent: %s (httpserver=%s)",
             scenario, ee_port,
         )
+        await self._log_remote("start_server", f"SUCCESS - process running (httpserver={ee_port})")
         return True
 
     async def stop_server(self) -> bool:
         """Stop EmptyEpsilon by killing the process on the EE host via SSH."""
+        await self._log_remote("stop_server", "pkill -f EmptyEpsilon")
         cmd = "pkill -f EmptyEpsilon || true"
         status, out, err = await self.run_command(cmd, timeout=15.0)
+        await self._log_remote("stop_server", f"result: status={status} out={out.strip() or ''} err={err.strip() or ''}")
         if status != 0:
             _LOGGER.warning(
                 "Stop server command failed (status=%s): %s %s",
@@ -256,7 +283,9 @@ class SSHManager:
         channels: int = DEFAULT_SACN_CHANNELS,
     ) -> bool:
         """Generate hardware.ini and upload to EE config dir (~/.emptyepsilon/)."""
+        await self._log_remote("deploy_hardware_ini", "starting", "universe=" + str(universe))
         status, out, err = await self.run_command("echo $HOME")
+        await self._log_remote("deploy_hardware_ini", f"echo HOME -> status={status} home={out.strip() or err}")
         if status != 0:
             _LOGGER.warning("Could not resolve remote HOME: %s %s", out, err)
             return False
@@ -264,8 +293,11 @@ class SSHManager:
         remote_dir = f"{home}/.emptyepsilon"
         remote_path = f"{remote_dir}/hardware.ini"
         mkdir_status, _, _ = await self.run_command(f"mkdir -p {remote_dir}")
+        await self._log_remote("deploy_hardware_ini", f"mkdir -p {remote_dir} -> status={mkdir_status}")
         if mkdir_status != 0:
             _LOGGER.warning("Could not create %s on remote", remote_dir)
             return False
         content = generate_hardware_ini(universe=universe, channels=channels)
-        return await self.upload_string(content, remote_path)
+        upload_ok = await self.upload_string(content, remote_path)
+        await self._log_remote("deploy_hardware_ini", f"upload to {remote_path} -> ok={upload_ok}")
+        return upload_ok
