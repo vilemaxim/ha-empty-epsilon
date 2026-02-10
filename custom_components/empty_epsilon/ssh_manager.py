@@ -198,7 +198,8 @@ class SSHManager:
         Returns True if the start command was sent and a process appears to be running.
         """
         base = ee_install_path.rstrip("/")
-        ee_bin = f"{base}/EmptyEpsilon"
+        # Accept directory (/usr/local/bin) or full path (/usr/local/bin/EmptyEpsilon)
+        ee_bin = base if base.endswith("EmptyEpsilon") else f"{base}/EmptyEpsilon"
         log_file = "/tmp/emptyepsilon_start.log"
         # Use bash -l for login shell (full PATH, env); log output for debugging
         cmd = (
