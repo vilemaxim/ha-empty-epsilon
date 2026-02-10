@@ -191,10 +191,11 @@ class SSHManager:
         Skips if already running. Uses login shell. Logs to /tmp/emptyepsilon_start.log.
         Returns True if the server is running (existing or newly started).
         """
-        check_status, check_out, _ = await self.run_command(
+        check_status, check_out, check_err = await self.run_command(
             "pgrep -f EmptyEpsilon || true",
             timeout=5.0,
         )
+        _LOGGER.debug("pgrep check: status=%s out=%r err=%r", check_status, check_out, check_err)
         if check_out.strip():
             _LOGGER.info("EmptyEpsilon already running, skipping start")
             return True
@@ -206,10 +207,13 @@ class SSHManager:
             f"nohup {ee_bin} headless httpserver={ee_port} scenario={scenario} "
             f"> {log_file} 2>&1 &"
         )
+        full_cmd = f'bash -l -c "{cmd}"'
+        _LOGGER.info("Running start command on %s:%s: %s", self._host, self._port, full_cmd)
         status, out, err = await self.run_command(
-            f'bash -l -c "{cmd}"',
+            full_cmd,
             timeout=15.0,
         )
+        _LOGGER.info("Start command result: status=%s stdout=%r stderr=%r", status, out, err)
         if status != 0:
             _LOGGER.warning(
                 "Start server command failed (status=%s): %s %s",

@@ -109,19 +109,29 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         _LOGGER.info("exec_lua result: %s", result[:200] if result else "")
 
     async def start_server(call: ServiceCall) -> None:
-        ssh, cfg = _get_ssh_and_config(hass, call)
-        install_path = cfg.get(CONF_EE_INSTALL_PATH, "/usr/local/bin")
-        ee_port = call.data.get("httpserver") or cfg.get(CONF_EE_PORT, 8080)
-        scenario = call.data.get("scenario") or DEFAULT_INIT_SCENARIO
-        sacn_universe = cfg.get(CONF_SACN_UNIVERSE, 2)
         try:
-            await ssh.deploy_hardware_ini(universe=sacn_universe)
-            ok = await ssh.start_server(install_path, ee_port, scenario)
-            if ok:
-                coord = _get_coordinator(hass, call)
-                await coord.async_request_refresh()
-        finally:
-            await ssh.disconnect()
+            ssh, cfg = _get_ssh_and_config(hass, call)
+            install_path = cfg.get(CONF_EE_INSTALL_PATH, "/usr/local/bin")
+            ee_port = call.data.get("httpserver") or cfg.get(CONF_EE_PORT, 8080)
+            scenario = call.data.get("scenario") or DEFAULT_INIT_SCENARIO
+            sacn_universe = cfg.get(CONF_SACN_UNIVERSE, 2)
+            _LOGGER.info(
+                "start_server: host=%s install_path=%s port=%s scenario=%s",
+                cfg.get(CONF_SSH_HOST), install_path, ee_port, scenario,
+            )
+            try:
+                deploy_ok = await ssh.deploy_hardware_ini(universe=sacn_universe)
+                _LOGGER.info("start_server: deploy_hardware_ini=%s", deploy_ok)
+                ok = await ssh.start_server(install_path, ee_port, scenario)
+                _LOGGER.info("start_server: start_server result=%s", ok)
+                if ok:
+                    coord = _get_coordinator(hass, call)
+                    await coord.async_request_refresh()
+            finally:
+                await ssh.disconnect()
+        except Exception as e:
+            _LOGGER.exception("start_server failed: %s", e)
+            raise
 
     async def stop_server(call: ServiceCall) -> None:
         ssh, _ = _get_ssh_and_config(hass, call)
