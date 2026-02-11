@@ -8,5 +8,6 @@
   "issue_tracker": "https://github.com/vilemaxim/ha-empty-epsilon/issues",
   "requirements": ["asyncssh>=2.14.0", "sacn>=1.9.0"],
   "version": "0.1.0",
-  "integration_type": "hub"
+  "integration_type": "hub",
+  "loggers": ["custom_components.empty_epsilon"]
 }

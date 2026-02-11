@@ -56,17 +56,23 @@ The Empty Epsilon logo is included in `custom_components/empty_epsilon/images/` 
 
 To see what the integration is doing and why HTTP sensors might show "Unknown", enable debug logging:
 
-1. **Settings** → **System** → **Logging**
-2. Under **Loggers**, add:
-   - **Logger:** `custom_components.empty_epsilon`
-   - **Level:** `DEBUG`
-3. Click **Save**, then reproduce the issue (wait for the next poll or reload the integration).
-4. Check **Settings** → **System** → **Logs** (or your `home-assistant.log`). You’ll see:
-   - Each HTTP API request (URL and Lua snippet)
-   - The raw response from EE (`get_has_game` result, response body snippet)
-   - Any `EEAPIError` or connection failures (logged at WARNING with the raw response)
+1. Go to **Settings** → **Devices & services**
+2. Find the **EmptyEpsilon** integration card and click it
+3. In the top-right corner, open the **⋮** (three dots) menu
+4. Select **Enable debug logging**
+5. Reproduce the issue (wait for the next poll or reload the integration)
+6. View logs at **Settings** → **System** → **Logs**
 
-When done, remove the custom logger or set it back to **Default** to avoid noisy logs.
+When done, use the same three dots menu → **Disable debug logging**.
+
+**Alternative** (if the menu option isn't available): add this to `configuration.yaml` and restart HA:
+
+```yaml
+logger:
+  default: info
+  logs:
+    custom_components.empty_epsilon: debug
+```
 
 ## Documentation
 
