@@ -62,6 +62,28 @@ The Empty Epsilon logo is included in `custom_components/empty_epsilon/images/` 
 
 **Automated deploy script:** For development, use `./deploy-to-ha.sh` to sync files, restart HA, and show recent EmptyEpsilon log entries. Copy `deploy-to-ha.env.example` to `deploy-to-ha.env` and configure your HA URL, token, and SSH access.
 
+## Testing EE API via curl
+
+Test the exec.lua endpoint directly (replace `HOST:PORT` with your EE server, e.g. `192.168.3.28:8080`):
+
+```bash
+# Has game (scenario + player ship)
+curl -X POST http://HOST:PORT/exec.lua -H "Content-Type: text/plain; charset=utf-8" \
+  -d "return tostring(getScenarioTime() ~= nil and getPlayerShip(-1) ~= nil)"
+
+# Player ship count (0,1,2... with -1 fallback for single ship)
+curl -X POST http://HOST:PORT/exec.lua -H "Content-Type: text/plain; charset=utf-8" \
+  -d "local n=0; for i=0,99 do if getPlayerShip(i) then n=n+1 end end; if n==0 and getPlayerShip(-1) then n=1 end; return tostring(n)"
+
+# Total objects
+curl -X POST http://HOST:PORT/exec.lua -H "Content-Type: text/plain; charset=utf-8" \
+  -d "local t=getAllObjects() or {}; return tostring(#t)"
+
+# Reputation (first active player ship)
+curl -X POST http://HOST:PORT/exec.lua -H "Content-Type: text/plain; charset=utf-8" \
+  -d "local s=getPlayerShip(-1); if not s then return '' end; return tostring(s:getReputationPoints() or 0)"
+```
+
 ## Debugging
 
 The integration logs to **Settings** → **System** → **Logs** in the main **Home Assistant** log (not a separate dropdown). Select the main/core log view and search for `empty_epsilon` or `EmptyEpsilon` to find entries.

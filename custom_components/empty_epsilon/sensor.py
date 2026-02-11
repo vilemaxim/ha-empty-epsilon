@@ -65,12 +65,6 @@ async def async_setup_entry(
     )
     entities.append(
         EmptyEpsilonSensor(
-            coordinator, entry_id, "active_scenario", "Active scenario",
-            icon="mdi:file-document-outline"
-        )
-    )
-    entities.append(
-        EmptyEpsilonSensor(
             coordinator, entry_id, "total_objects", "Total objects",
             unit="objects", icon="mdi:counter", state_class=SensorStateClass.MEASUREMENT
         )

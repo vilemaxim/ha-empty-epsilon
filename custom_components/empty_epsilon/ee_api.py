@@ -84,12 +84,13 @@ class EEAPIClient:
             return False
 
     async def get_player_ship_count(self) -> int:
-        """Count active player ships. Uses getPlayerShip(-1) for first active, then 0,1,2..."""
+        """Count active player ships. Use 0,1,2... (getPlayerShip(-1) can duplicate 0)."""
         try:
             r = await self.exec_lua(
-                "local n=0; for i=-1,99 do if getPlayerShip(i) then n=n+1 end end; return tostring(n)"
+                "local n=0; for i=0,99 do if getPlayerShip(i) then n=n+1 end end; "
+                "if n==0 and getPlayerShip(-1) then n=1 end; return tostring(n)"
             )
-            return int(r.strip()) if r and r.strip().isdigit() else 0
+            return int(float(r.strip())) if r and r.strip() else 0
         except (EEAPIError, ValueError):
             return 0
 
@@ -274,23 +275,13 @@ class EEAPIClient:
 
     # --- Phase 2: Server-level and primary ship sensors ---
 
-    async def get_active_scenario(self) -> str | None:
-        """Return active scenario name or None."""
-        try:
-            r = await self.exec_lua(
-                "if getScenarioName then return tostring(getScenarioName() or '') end; return ''"
-            )
-            return (r or "").strip() or None
-        except EEAPIError:
-            return None
-
     async def get_total_objects(self) -> int:
         """Return count of all game objects."""
         try:
             r = await self.exec_lua(
                 "local t=getAllObjects() or {}; return tostring(#t)"
             )
-            return int(r.strip()) if r and r.strip().isdigit() else 0
+            return int(float(r.strip())) if r and r.strip() else 0
         except (EEAPIError, ValueError):
             return 0
 
@@ -302,7 +293,7 @@ class EEAPIClient:
                 "local n=0; for _,o in ipairs(getAllObjects() or {}) do "
                 "if o.typeName=='CpuShip' and p:isEnemy(o) then n=n+1 end end; return tostring(n)"
             )
-            return int(r.strip()) if r and r.strip().lstrip("-").isdigit() else 0
+            return int(float(r.strip())) if r and r.strip() else 0
         except (EEAPIError, ValueError):
             return 0
 
@@ -314,7 +305,7 @@ class EEAPIClient:
                 "local n=0; for _,o in ipairs(getAllObjects() or {}) do "
                 "if o.typeName=='SpaceStation' and p:isFriendly(o) then n=n+1 end end; return tostring(n)"
             )
-            return int(r.strip()) if r and r.strip().lstrip("-").isdigit() else 0
+            return int(float(r.strip())) if r and r.strip() else 0
         except (EEAPIError, ValueError):
             return 0
 
@@ -346,7 +337,7 @@ class EEAPIClient:
             if not r or "|" not in r:
                 return result
             parts = r.strip().split("|", 8)
-            result["callsign"] = parts[0].strip() or None
+            result["callsign"] = (parts[0].strip().strip('"\'') or None) if parts[0] else None
             result["ship_type"] = parts[1].strip() or None
             result["sector"] = parts[2].strip() or None
             for i, k in enumerate(["homing", "nuke", "emp", "mine", "hvli"], 3):
@@ -356,7 +347,7 @@ class EEAPIClient:
                     result[k] = 0
             if len(parts) > 8:
                 try:
-                    result["reputation"] = int(parts[8])
+                    result["reputation"] = int(float(parts[8]))
                 except (ValueError, TypeError):
                     result["reputation"] = None
             return result
