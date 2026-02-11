@@ -52,6 +52,16 @@ To change integration settings (EE Install Path, poll interval, sACN universe, e
 
 The Empty Epsilon logo is included in `custom_components/empty_epsilon/images/` (icon.png, logo.png). To have it appear in the Home Assistant frontend (Settings → Integrations), submit the images to the [Home Assistant brands repository](https://github.com/home-assistant/brands) by adding `custom_integrations/empty_epsilon/` with `icon.png` and `logo.png`.
 
+## Deploying updates
+
+**The integration runs from HA's config folder, not your project folder.** After changing code, you must copy files to your Home Assistant instance:
+
+- **HA OS path:** `/config/custom_components/empty_epsilon/` (use the **File Editor** add-on or **Samba** share)
+- **Manual:** Copy the entire `custom_components/empty_epsilon` folder from this repo into HA's `custom_components` directory
+- **After updating:** Restart Home Assistant (Configuration → System → Restart), not just reload
+
+**Verify deployment:** After restart, check **Settings** → **System** → **Logs**. Search for `EmptyEpsilon: integration loading`. If you see that WARNING, the updated code is running. If you don't, the old code is still in use.
+
 ## Debugging
 
 The integration logs to **Settings** → **System** → **Logs** in the main **Home Assistant** log (not a separate dropdown). Select the main/core log view and search for `empty_epsilon` or `EmptyEpsilon` to find entries.

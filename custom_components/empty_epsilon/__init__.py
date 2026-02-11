@@ -45,6 +45,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up EmptyEpsilon from a config entry."""
+    _LOGGER.warning("EmptyEpsilon: integration loading (if you see this, updated code is deployed)")
     data = dict(config_entry.data)
     options = config_entry.options or {}
     # EE API always uses the same host as SSH
