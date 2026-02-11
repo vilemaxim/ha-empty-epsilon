@@ -207,7 +207,6 @@ Body: return tostring(gameGlobalInfo:getVictoryFaction())
 | **Has Ship** | `binary_sensor` | sACN | Whether a player ship exists in the game |
 | **Game Paused** | `binary_sensor` | HTTP | Whether the game is currently paused |
 | **Scenario Time** | `sensor` | HTTP | Elapsed time since scenario start (seconds) |
-| **Active Scenario** | `sensor` | HTTP | Name of the currently loaded scenario |
 | **Total Objects** | `sensor` | HTTP | Count of all game objects (ships, stations, etc.) |
 | **Enemy Ship Count** | `sensor` | HTTP | Number of hostile ships remaining |
 | **Friendly Station Count** | `sensor` | HTTP | Number of friendly stations |

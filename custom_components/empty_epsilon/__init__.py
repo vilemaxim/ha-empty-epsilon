@@ -7,6 +7,7 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 
 from .const import (
     CONF_EE_HOST,
@@ -87,6 +88,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             config_entry,
             options={**options, OPTION_HAS_AUTO_STARTED: True},
         )
+
+    # Remove orphaned Active scenario entity (no EE API to get scenario name)
+    entity_reg = er.async_get(hass)
+    active_scenario_id = entity_reg.async_get_entity_id(
+        "sensor", DOMAIN, f"{config_entry.entry_id}_active_scenario"
+    )
+    if active_scenario_id:
+        entity_reg.async_remove(active_scenario_id)
+        _LOGGER.debug("Removed orphaned entity %s", active_scenario_id)
 
     coordinator = EmptyEpsilonCoordinator(hass, data)
     _LOGGER.info(

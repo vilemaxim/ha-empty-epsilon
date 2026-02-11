@@ -88,10 +88,6 @@ curl -X POST http://HOST:PORT/exec.lua -H "Content-Type: text/plain; charset=utf
   -d "local g=gameGlobalInfo; if g then return tostring(g:getVictoryFaction() or '') end; return ''"
 ```
 
-## Orphaned entities
-
-If you previously had the **Active scenario** sensor and it now shows "Unavailable", remove it manually: **Settings** → **Devices & services** → EmptyEpsilon → **Entities** → select the orphaned entity → **Delete**.
-
 ## Debugging
 
 The integration logs to **Settings** → **System** → **Logs** in the main **Home Assistant** log (not a separate dropdown). Select the main/core log view and search for `empty_epsilon` or `EmptyEpsilon` to find entries.

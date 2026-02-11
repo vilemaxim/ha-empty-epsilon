@@ -58,11 +58,17 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if scenario_time is None:
             self._last_scenario_time = None
             return False
-        # Need at least 1s of real time to compare (sACN may trigger frequent refreshes)
-        if self._last_scenario_time is not None and (now - self._last_scenario_time_at) >= 1.0:
+        # Need at least 0.5s real time between polls to compare
+        min_elapsed = 0.5
+        if self._last_scenario_time is not None and (now - self._last_scenario_time_at) >= min_elapsed:
+            elapsed_real = now - self._last_scenario_time_at
             delta_scenario = scenario_time - self._last_scenario_time
-            # If scenario advanced by less than 0.5s over 1s+ real time, consider paused
-            paused = delta_scenario < 0.5
+            # If scenario advanced by less than 0.1s over min_elapsed real time, consider paused
+            paused = delta_scenario < 0.1
+            _LOGGER.debug(
+                "pause inference: elapsed_real=%.1fs delta_scenario=%.2fs -> %s",
+                elapsed_real, delta_scenario, "paused" if paused else "running",
+            )
         else:
             paused = False
         self._last_scenario_time = scenario_time
