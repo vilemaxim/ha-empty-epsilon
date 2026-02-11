@@ -25,6 +25,7 @@ async def async_setup_entry(
 
     entities = [
         EmptyEpsilonServerReachableSensor(coordinator, entry_id, config),
+        EmptyEpsilonHTTPServerSensor(coordinator, entry_id, config),
         EmptyEpsilonHasShipSensor(coordinator, entry_id, config),
         EmptyEpsilonGamePausedSensor(coordinator, entry_id, config),
         EmptyEpsilonSACNBinarySensor(coordinator, entry_id, "shieldsUp", "Shields up", "mdi:shield"),
@@ -53,6 +54,22 @@ class EmptyEpsilonServerReachableSensor(EmptyEpsilonEntity, BinarySensorEntity):
         # If we have recent sACN data with hasShip or any channel, consider reachable
         sacn = self.coordinator.data.get("sacn", {})
         return bool(sacn and (sacn.get("hasShip", 0) > 0.5 or sacn.get("hull", 0) >= 0))
+
+
+class EmptyEpsilonHTTPServerSensor(EmptyEpsilonEntity, BinarySensorEntity):
+    """Whether the EE HTTP server (exec.lua) is responding."""
+
+    _attr_translation_key = "httpserver"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator, entry_id, config):
+        super().__init__(
+            coordinator, entry_id, "httpserver", "HTTP server", "mdi:server-network"
+        )
+
+    @property
+    def is_on(self) -> bool:
+        return bool(self.coordinator.data.get("http", {}).get("server_reachable"))
 
 
 class EmptyEpsilonHasShipSensor(EmptyEpsilonEntity, BinarySensorEntity):

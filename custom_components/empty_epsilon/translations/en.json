@@ -48,6 +48,9 @@
       "online": {
         "name": "Online"
       },
+      "httpserver": {
+        "name": "HTTP server"
+      },
       "server_reachable": {
         "name": "Server reachable"
       },
