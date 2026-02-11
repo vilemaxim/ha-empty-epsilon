@@ -54,18 +54,11 @@ The Empty Epsilon logo is included in `custom_components/empty_epsilon/images/` 
 
 ## Debugging
 
-To see what the integration is doing and why HTTP sensors might show "Unknown", enable debug logging:
+The integration logs to **Settings** → **System** → **Logs** in the main **Home Assistant** log (not a separate dropdown). Select the main/core log view and search for `empty_epsilon` or `EmptyEpsilon` to find entries.
 
-1. Go to **Settings** → **Devices & services**
-2. Find the **EmptyEpsilon** integration card and click it
-3. In the top-right corner, open the **⋮** (three dots) menu
-4. Select **Enable debug logging**
-5. Reproduce the issue (wait for the next poll or reload the integration)
-6. View logs at **Settings** → **System** → **Logs**
+**Enable logging via configuration.yaml** (most reliable):
 
-When done, use the same three dots menu → **Disable debug logging**.
-
-**Alternative** (if the menu option isn't available): add this to `configuration.yaml` and restart HA:
+1. Add or merge this into `configuration.yaml` in your config folder:
 
 ```yaml
 logger:
@@ -73,6 +66,19 @@ logger:
   logs:
     custom_components.empty_epsilon: debug
 ```
+
+2. Restart Home Assistant.
+
+**Or use the integration menu** (if available): **Settings** → **Devices & services** → EmptyEpsilon → **⋮** → **Enable debug logging**.
+
+**What you'll see:**
+
+- `EmptyEpsilon setup: EE API at http://...` — confirms the integration loaded and which host:port it uses
+- `EmptyEpsilon HTTP poll: has_game=... url=...` — every poll cycle (default every 10s)
+- `get_has_game: EE returned ... -> has_game=...` — raw response from the EE server
+- WARNING lines when the HTTP API fails (connection error, EE error response)
+
+If you see no EmptyEpsilon lines at all, the integration may be failing before it starts (check for errors mentioning `empty_epsilon` or `binary_sensor`).
 
 ## Documentation
 

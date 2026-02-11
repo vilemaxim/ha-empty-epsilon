@@ -78,7 +78,7 @@ class EEAPIClient:
             )
             raw = (r or "").strip()
             result = raw.lower() == "true"
-            _LOGGER.debug("get_has_game raw=%s result=%s", repr(raw), result)
+            _LOGGER.info("get_has_game: EE returned %s -> has_game=%s", repr(raw), result)
             return result
         except EEAPIError as e:
             _LOGGER.debug("get_has_game failed: %s (raw=%s)", e, getattr(e, "raw", None))

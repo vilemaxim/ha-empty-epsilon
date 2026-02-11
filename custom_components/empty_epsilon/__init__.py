@@ -89,6 +89,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         )
 
     coordinator = EmptyEpsilonCoordinator(hass, data)
+    _LOGGER.info(
+        "EmptyEpsilon setup: EE API at http://%s:%s",
+        data.get(CONF_EE_HOST, "?"),
+        data.get(CONF_EE_PORT, 8080),
+    )
     await coordinator.async_config_entry_first_refresh()
     hass.data.setdefault(DOMAIN, {})[config_entry.entry_id] = coordinator
 
