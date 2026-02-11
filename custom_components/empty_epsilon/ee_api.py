@@ -74,22 +74,20 @@ class EEAPIClient:
         """Return True if a game is running (scenario time and player ship exist)."""
         try:
             r = await self.exec_lua(
-                "return tostring(getScenarioTime() ~= nil and getPlayerShip(0) ~= nil)"
+                "return tostring(getScenarioTime() ~= nil and getPlayerShip(-1) ~= nil)"
             )
-            raw = (r or "").strip()
+            raw = (r or "").strip().strip('"\'')
             result = raw.lower() == "true"
-            if not result:
-                _LOGGER.warning("EmptyEpsilon get_has_game: EE returned %s (expected 'true')", repr(raw))
             return result
         except EEAPIError as e:
             _LOGGER.debug("get_has_game failed: %s (raw=%s)", e, getattr(e, "raw", None))
             return False
 
     async def get_player_ship_count(self) -> int:
-        """Count active player ships (1-indexed until nil)."""
+        """Count active player ships. Uses getPlayerShip(-1) for first active, then 0,1,2..."""
         try:
             r = await self.exec_lua(
-                "local n=0; while getPlayerShip(n) do n=n+1 end; return tostring(n)"
+                "local n=0; for i=-1,99 do if getPlayerShip(i) then n=n+1 end end; return tostring(n)"
             )
             return int(r.strip()) if r and r.strip().isdigit() else 0
         except (EEAPIError, ValueError):
@@ -206,7 +204,7 @@ class EEAPIClient:
         """Send an incoming comms message to a player ship by callsign."""
         c, m = self._escape(callsign), self._escape(message)
         await self.exec_lua(
-            f'for i=0,99 do local s=getPlayerShip(i); if s and s:getCallSign()=="{c}" then '
+            f'for i=-1,99 do local s=getPlayerShip(i); if s and s:getCallSign()=="{c}" then '
             f's:addCustomMessage("gm","{m}"); break end end'
         )
 
@@ -215,7 +213,7 @@ class EEAPIClient:
         c = self._escape(callsign)
         v = max(0, min(100, float(value)))
         await self.exec_lua(
-            f'for i=0,99 do local s=getPlayerShip(i); if s and s:getCallSign()=="{c}" then '
+            f'for i=-1,99 do local s=getPlayerShip(i); if s and s:getCallSign()=="{c}" then '
             f's:setHull({v}); break end end'
         )
 
@@ -224,7 +222,7 @@ class EEAPIClient:
         c = self._escape(callsign)
         f, r = max(0, min(100, float(front))), max(0, min(100, float(rear)))
         await self.exec_lua(
-            f'for i=0,99 do local s=getPlayerShip(i); if s and s:getCallSign()=="{c}" then '
+            f'for i=-1,99 do local s=getPlayerShip(i); if s and s:getCallSign()=="{c}" then '
             f's:setShields({f},{r}); break end end'
         )
 
@@ -245,19 +243,19 @@ class EEAPIClient:
                 updates.append(f's:setWeaponStorage("{name}", (s:getWeaponStorage("{name}") or 0)+{count})')
         if not updates:
             return
-        lua = f'for i=0,99 do local s=getPlayerShip(i); if s and s:getCallSign()=="{c}" then {" ".join(updates)}; break end end'
+        lua = f'for i=-1,99 do local s=getPlayerShip(i); if s and s:getCallSign()=="{c}" then {" ".join(updates)}; break end end'
         await self.exec_lua(lua)
 
     async def red_alert_all(self) -> None:
         """Set all player ships to red alert."""
         await self.exec_lua(
-            'for i=0,99 do local s=getPlayerShip(i); if s then s:setAlertLevel("red"); end end'
+            'for i=-1,99 do local s=getPlayerShip(i); if s then s:setAlertLevel("RED ALERT"); end end'
         )
 
     async def resupply_all(self) -> None:
         """Refill energy and ammo for all player ships."""
         await self.exec_lua(
-            "for i=0,99 do local s=getPlayerShip(i); if s then "
+            "for i=-1,99 do local s=getPlayerShip(i); if s then "
             "s:setEnergyLevel(s:getEnergyLevelMax()); "
             "for _,w in ipairs({'Homing','Nuke','EMP','Mine','HVLI'}) do "
             "local m=s:getWeaponStorageMax(w); if m and m>0 then s:setWeaponStorage(w,m) end end "
@@ -267,8 +265,8 @@ class EEAPIClient:
     async def repair_all(self) -> None:
         """Restore hull and shields for all player ships."""
         await self.exec_lua(
-            "for i=0,99 do local s=getPlayerShip(i); if s then "
-            "s:setHull(100); "
+            "for i=-1,99 do local s=getPlayerShip(i); if s then "
+            "s:setHull(s:getHullMax() or 100); "
             "local fm=s:getShieldMax(0); local rm=s:getShieldMax(1); "
             "s:setShields(fm and fm or 100, rm and rm or 100); "
             "end end"
@@ -300,7 +298,7 @@ class EEAPIClient:
         """Return count of hostile CpuShips (from first player's perspective)."""
         try:
             r = await self.exec_lua(
-                "local p=getPlayerShip(0); if not p then return '0' end; "
+                "local p=getPlayerShip(-1); if not p then return '0' end; "
                 "local n=0; for _,o in ipairs(getAllObjects() or {}) do "
                 "if o.typeName=='CpuShip' and p:isEnemy(o) then n=n+1 end end; return tostring(n)"
             )
@@ -312,7 +310,7 @@ class EEAPIClient:
         """Return count of stations friendly to first player."""
         try:
             r = await self.exec_lua(
-                "local p=getPlayerShip(0); if not p then return '0' end; "
+                "local p=getPlayerShip(-1); if not p then return '0' end; "
                 "local n=0; for _,o in ipairs(getAllObjects() or {}) do "
                 "if o.typeName=='SpaceStation' and p:isFriendly(o) then n=n+1 end end; return tostring(n)"
             )
@@ -336,13 +334,13 @@ class EEAPIClient:
         try:
             # Single exec for primary ship: callsign, type, sector, ammo, reputation
             r = await self.exec_lua(
-                "local s=getPlayerShip(0); if not s then return '' end; "
+                "local s=getPlayerShip(-1); if not s then return '' end; "
                 "local c=s:getCallSign() or ''; local t=s:getTypeName() or ''; "
                 "local sec=''; if s.getSectorName then sec=s:getSectorName() or '' end; "
                 "local h=s:getWeaponStorage('Homing') or 0; local n=s:getWeaponStorage('Nuke') or 0; "
                 "local e=s:getWeaponStorage('EMP') or 0; local m=s:getWeaponStorage('Mine') or 0; "
                 "local v=s:getWeaponStorage('HVLI') or 0; "
-                "local rep=0; if getReputationPoints then rep=getReputationPoints(s:getFaction()) or 0 end; "
+                "local rep=0; if s.getReputationPoints then rep=s:getReputationPoints() or 0 end; "
                 "return c..'|'..t..'|'..sec..'|'..tostring(h)..'|'..tostring(n)..'|'..tostring(e)..'|'..tostring(m)..'|'..tostring(v)..'|'..tostring(rep)"
             )
             if not r or "|" not in r:

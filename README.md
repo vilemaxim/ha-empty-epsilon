@@ -60,7 +60,7 @@ The Empty Epsilon logo is included in `custom_components/empty_epsilon/images/` 
 - **Manual:** Copy the entire `custom_components/empty_epsilon` folder from this repo into HA's `custom_components` directory
 - **After updating:** Restart Home Assistant (Configuration → System → Restart), not just reload
 
-**Verify deployment:** After restart, check **Settings** → **System** → **Logs**. Search for `EmptyEpsilon: integration loading`. If you see that WARNING, the updated code is running. If you don't, the old code is still in use.
+**Automated deploy script:** For development, use `./deploy-to-ha.sh` to sync files, restart HA, and show recent EmptyEpsilon log entries. Copy `deploy-to-ha.env.example` to `deploy-to-ha.env` and configure your HA URL, token, and SSH access.
 
 ## Debugging
 
