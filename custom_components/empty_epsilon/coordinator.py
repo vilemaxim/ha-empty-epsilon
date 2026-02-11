@@ -89,11 +89,6 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             has_game = await self._api.get_has_game()
             data["http"]["has_game"] = has_game
             data["http"]["server_reachable"] = True
-            _LOGGER.info(
-                "EmptyEpsilon HTTP poll: has_game=%s url=%s",
-                has_game,
-                self._base_url,
-            )
 
             if has_game:
                 scenario_time = await self._api.get_scenario_time()
