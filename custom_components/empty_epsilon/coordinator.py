@@ -89,6 +89,7 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             has_game = await self._api.get_has_game()
             data["http"]["has_game"] = has_game
             data["http"]["server_reachable"] = True
+            _LOGGER.debug("HTTP API has_game=%s base_url=%s", has_game, self._base_url)
 
             if has_game:
                 scenario_time = await self._api.get_scenario_time()
@@ -132,7 +133,7 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 data["http"]["primary_ship"] = {}
 
         except EEAPIError as e:
-            _LOGGER.debug("HTTP API update failed: %s", e)
+            _LOGGER.warning("HTTP API update failed: %s (raw=%s)", e, getattr(e, "raw", None))
             data["http"]["server_reachable"] = False
             data["http"]["has_game"] = False
             data["game_status"] = GAME_STATUS_SETUP

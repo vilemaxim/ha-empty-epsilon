@@ -52,6 +52,22 @@ To change integration settings (EE Install Path, poll interval, sACN universe, e
 
 The Empty Epsilon logo is included in `custom_components/empty_epsilon/images/` (icon.png, logo.png). To have it appear in the Home Assistant frontend (Settings → Integrations), submit the images to the [Home Assistant brands repository](https://github.com/home-assistant/brands) by adding `custom_integrations/empty_epsilon/` with `icon.png` and `logo.png`.
 
+## Debugging
+
+To see what the integration is doing and why HTTP sensors might show "Unknown", enable debug logging:
+
+1. **Settings** → **System** → **Logging**
+2. Under **Loggers**, add:
+   - **Logger:** `custom_components.empty_epsilon`
+   - **Level:** `DEBUG`
+3. Click **Save**, then reproduce the issue (wait for the next poll or reload the integration).
+4. Check **Settings** → **System** → **Logs** (or your `home-assistant.log`). You’ll see:
+   - Each HTTP API request (URL and Lua snippet)
+   - The raw response from EE (`get_has_game` result, response body snippet)
+   - Any `EEAPIError` or connection failures (logged at WARNING with the raw response)
+
+When done, remove the custom logger or set it back to **Default** to avoid noisy logs.
+
 ## Documentation
 
 See [PROJECT.md](PROJECT.md) for full architecture, sensor list, and implementation phases.

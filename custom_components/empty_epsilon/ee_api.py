@@ -35,14 +35,17 @@ class EEAPIClient:
         Execute Lua code on the EE server. Returns the result as string.
         Raises EEAPIError on API error or no game.
         """
+        url = self._url(EE_EXEC_PATH)
+        _LOGGER.debug("exec_lua POST %s (Lua: %s)", url, lua_code[:80] + "..." if len(lua_code) > 80 else lua_code)
         async with aiohttp.ClientSession(timeout=self._timeout) as session:
             try:
                 async with session.post(
-                    self._url(EE_EXEC_PATH),
+                    url,
                     data=lua_code,
                     headers={"Content-Type": "text/plain; charset=utf-8"},
                 ) as resp:
                     text = await resp.text()
+                    _LOGGER.debug("exec_lua response status=%s len=%d body=%s", resp.status, len(text), repr(text[:200]))
                     if resp.status != 200:
                         raise EEAPIError(f"HTTP {resp.status}: {text}", raw=text)
                     # EE returns JSON on error: {"ERROR": "..."}
@@ -56,7 +59,7 @@ class EEAPIClient:
                             pass
                     return text
             except aiohttp.ClientError as e:
-                _LOGGER.debug("HTTP request failed: %s", e)
+                _LOGGER.warning("HTTP request failed to %s: %s", url, e)
                 raise EEAPIError(str(e)) from e
 
     async def get_scenario_time(self) -> float | None:
@@ -73,8 +76,12 @@ class EEAPIClient:
             r = await self.exec_lua(
                 "return tostring(getScenarioTime() ~= nil and getPlayerShip(0) ~= nil)"
             )
-            return r.strip().lower() == "true"
-        except EEAPIError:
+            raw = (r or "").strip()
+            result = raw.lower() == "true"
+            _LOGGER.debug("get_has_game raw=%s result=%s", repr(raw), result)
+            return result
+        except EEAPIError as e:
+            _LOGGER.debug("get_has_game failed: %s (raw=%s)", e, getattr(e, "raw", None))
             return False
 
     async def get_player_ship_count(self) -> int:
