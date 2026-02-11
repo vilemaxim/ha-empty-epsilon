@@ -29,8 +29,11 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import EmptyEpsilonCoordinator
+from .diagnostics import async_get_config_entry_diagnostics
 from .services import async_setup_services
 from .ssh_manager import SSHManager
+
+__all__ = ["async_get_config_entry_diagnostics", "async_setup", "async_setup_entry", "async_unload_entry"]
 
 _LOGGER = logging.getLogger(__name__)
 
