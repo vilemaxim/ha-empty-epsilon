@@ -7,7 +7,7 @@ import time
 from datetime import timedelta
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
@@ -97,6 +97,13 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def sacn_listener(self) -> SACNListener | None:
         return self._sacn
 
+    @callback
+    def _push_sacn_only(self, sacn_data: dict[str, float]) -> None:
+        """Update sACN data and notify listeners immediately (no HTTP poll)."""
+        if self.data is not None and isinstance(self.data, dict):
+            self.data["sacn"] = sacn_data
+            self.async_update_listeners()
+
     async def _async_update_data(self) -> dict[str, Any]:
         """Merge sACN data with HTTP API data."""
         data: dict[str, Any] = {"sacn": {}, "http": {}, "game_status": None}
@@ -172,9 +179,10 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Start sACN listener and wire callback to request refresh."""
         if not self._sacn:
             return
-        # Throttle: sACN ~20Hz would flood HTTP; poll at most every _sacn_refresh_interval
-        # so pause detection (_infer_paused needs 1s+ between polls) and switch state work
-        def on_sacn_data(_data: dict) -> None:
+        # Fast path: push sACN to entities immediately (~50ms) for hull, shields, etc.
+        # Slow path: full HTTP refresh throttled so pause detection and game status work
+        def on_sacn_data(sacn_data: dict) -> None:
+            self._push_sacn_only(sacn_data)
             now = time.monotonic()
             if now - self._last_sacn_refresh_at >= self._sacn_refresh_interval:
                 self._last_sacn_refresh_at = now
