@@ -49,6 +49,8 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._sacn = SACNListener(universe=universe)
         self._last_scenario_time: float | None = None
         self._last_scenario_time_at: float = 0.0
+        self._last_sacn_refresh_at: float = 0.0
+        self._sacn_refresh_interval: float = 2.0  # Min seconds between sACN-triggered HTTP polls
 
     def _infer_paused(self, scenario_time: float | None) -> bool:
         """Infer paused when scenario time does not advance (EE getGameSpeed returns nil in headless)."""
@@ -148,9 +150,13 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Start sACN listener and wire callback to request refresh."""
         if not self._sacn:
             return
-        # Callback runs on event loop (from sacn_listener._packet_received); schedule refresh
+        # Throttle: sACN ~20Hz would flood HTTP; poll at most every _sacn_refresh_interval
+        # so pause detection (_infer_paused needs 1s+ between polls) and switch state work
         def on_sacn_data(_data: dict) -> None:
-            self.hass.async_create_task(self.async_request_refresh())
+            now = time.monotonic()
+            if now - self._last_sacn_refresh_at >= self._sacn_refresh_interval:
+                self._last_sacn_refresh_at = now
+                self.hass.async_create_task(self.async_request_refresh())
 
         self._sacn.set_callback(on_sacn_data)
         await self._sacn.start()
