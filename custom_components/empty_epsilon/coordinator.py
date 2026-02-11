@@ -49,6 +49,8 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._sacn = SACNListener(universe=universe)
         self._last_scenario_time: float | None = None
         self._last_scenario_time_at: float = 0.0
+        self._last_inferred_paused: bool | None = None  # Persist when uncertain
+        self._running_count: int = 0  # Consecutive "running" samples for hysteresis
         self._last_sacn_refresh_at: float = 0.0
         self._sacn_refresh_interval: float = 2.0  # Min seconds between sACN-triggered HTTP polls
 
@@ -57,20 +59,32 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         now = time.monotonic()
         if scenario_time is None:
             self._last_scenario_time = None
-            return False
-        # Need at least 0.5s real time between polls to compare
-        min_elapsed = 0.5
+            self._running_count = 0
+            return self._last_inferred_paused if self._last_inferred_paused is not None else False
+        min_elapsed = 1.0  # Need 1s between polls for reliable inference
         if self._last_scenario_time is not None and (now - self._last_scenario_time_at) >= min_elapsed:
             elapsed_real = now - self._last_scenario_time_at
             delta_scenario = scenario_time - self._last_scenario_time
-            # If scenario advanced by less than 0.1s over min_elapsed real time, consider paused
-            paused = delta_scenario < 0.1
+            # Paused if scenario advanced by less than 0.2s over min_elapsed real time
+            raw_paused = delta_scenario < 0.2
+            # Hysteresis: require 2 consecutive "running" before switching paused->running
+            if raw_paused:
+                self._running_count = 0
+                paused = True
+            elif self._last_inferred_paused:
+                self._running_count += 1
+                paused = self._running_count < 2  # Stay paused until 2 running samples
+            else:
+                paused = False
+            self._last_inferred_paused = paused
             _LOGGER.debug(
-                "pause inference: elapsed_real=%.1fs delta_scenario=%.2fs -> %s",
-                elapsed_real, delta_scenario, "paused" if paused else "running",
+                "pause inference: elapsed=%.1fs delta=%.2fs raw=%s -> %s",
+                elapsed_real, delta_scenario, "paused" if raw_paused else "running",
+                "paused" if paused else "running",
             )
         else:
-            paused = False
+            # Not enough data: keep last known state to avoid glitching to False
+            paused = self._last_inferred_paused if self._last_inferred_paused is not None else False
         self._last_scenario_time = scenario_time
         self._last_scenario_time_at = now
         return paused
@@ -133,6 +147,8 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 data["http"]["player_ship_count"] = 0
                 data["http"]["paused"] = False
                 self._last_scenario_time = None
+                self._last_inferred_paused = None
+                self._running_count = 0
                 data["http"]["victory_faction"] = None
                 data["http"]["total_objects"] = 0
                 data["http"]["enemy_ship_count"] = 0
