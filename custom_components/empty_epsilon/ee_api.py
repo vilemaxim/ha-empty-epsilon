@@ -100,7 +100,11 @@ class EEAPIClient:
             r = await self.exec_lua(
                 "local g=gameGlobalInfo; if g then return tostring(g:getVictoryFaction() or '') end; return ''"
             )
-            return r.strip() or None
+            raw = (r or "").strip().strip('"\'')
+            # Treat nil, null, none, empty as "game not over"
+            if not raw or raw.lower() in ("nil", "null", "none"):
+                return None
+            return raw
         except EEAPIError:
             return None
 
@@ -336,20 +340,25 @@ class EEAPIClient:
             )
             if not r or "|" not in r:
                 return result
-            parts = r.strip().split("|", 8)
+            raw = r.strip().strip('"\'')
+            parts = raw.split("|", 8)
             result["callsign"] = (parts[0].strip().strip('"\'') or None) if parts[0] else None
-            result["ship_type"] = parts[1].strip() or None
-            result["sector"] = parts[2].strip() or None
+            result["ship_type"] = (parts[1].strip() or None) if len(parts) > 1 else None
+            result["sector"] = (parts[2].strip() or None) if len(parts) > 2 else None
             for i, k in enumerate(["homing", "nuke", "emp", "mine", "hvli"], 3):
                 try:
-                    result[k] = int(parts[i]) if i < len(parts) and parts[i] else 0
+                    result[k] = int(float(parts[i])) if i < len(parts) and parts[i] else 0
                 except (ValueError, IndexError):
                     result[k] = 0
             if len(parts) > 8:
-                try:
-                    result["reputation"] = int(float(parts[8]))
-                except (ValueError, TypeError):
-                    result["reputation"] = None
+                rep_raw = (parts[8] or "").strip().strip('"\'')
+                if rep_raw and rep_raw.lower() not in ("nil", "null", "none"):
+                    try:
+                        result["reputation"] = int(float(rep_raw))
+                    except (ValueError, TypeError):
+                        result["reputation"] = 0
+                else:
+                    result["reputation"] = 0
             return result
         except EEAPIError:
             return result

@@ -56,12 +56,11 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if scenario_time is None:
             self._last_scenario_time = None
             return False
-        # Need at least 3s of real time to compare
-        if self._last_scenario_time is not None and (now - self._last_scenario_time_at) >= 3.0:
-            elapsed_real = now - self._last_scenario_time_at
+        # Need at least 1s of real time to compare (sACN may trigger frequent refreshes)
+        if self._last_scenario_time is not None and (now - self._last_scenario_time_at) >= 1.0:
             delta_scenario = scenario_time - self._last_scenario_time
-            # If scenario advanced by less than 1s over 3s+ real time, consider paused
-            paused = delta_scenario < 1.0
+            # If scenario advanced by less than 0.5s over 1s+ real time, consider paused
+            paused = delta_scenario < 0.5
         else:
             paused = False
         self._last_scenario_time = scenario_time
@@ -94,10 +93,13 @@ class EmptyEpsilonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 scenario_time = await self._api.get_scenario_time()
                 data["http"]["scenario_time"] = scenario_time
                 data["http"]["player_ship_count"] = await self._api.get_player_ship_count()
-                # EE getGameSpeed() returns nil in headless; infer pause from scenario time not advancing
-                data["http"]["paused"] = self._infer_paused(scenario_time)
+                # Try is_paused() first; fall back to inferring from scenario time when getGameSpeed is nil in headless
+                paused_api = await self._api.is_paused()
+                data["http"]["paused"] = paused_api if paused_api else self._infer_paused(scenario_time)
                 victory = await self._api.get_victory_faction()
                 data["http"]["victory_faction"] = victory
+                if victory:
+                    _LOGGER.debug("get_victory_faction returned %r (game over)", victory)
 
                 # Phase 2: server-level and primary ship sensors
                 data["http"]["total_objects"] = await self._api.get_total_objects()

@@ -13,7 +13,7 @@ A custom Home Assistant integration for [Empty Epsilon](https://daid.github.io/E
 
 | Source | Sensors |
 |--------|---------|
-| **HTTP API** (polled) | Game status, Player ship count, Scenario time, Active scenario, Total objects, Enemy ships, Friendly stations, Game paused, Callsign, Ship type, Sector, Homing/Nuke/EMP/Mine/HVLI ammo, Reputation |
+| **HTTP API** (polled) | Game status, Player ship count, Scenario time, Total objects, Enemy ships, Friendly stations, Game paused, Callsign, Ship type, Sector, Homing/Nuke/EMP/Mine/HVLI ammo, Reputation |
 | **sACN** (real-time push) | Hull, Front shields, Rear shields, Energy, Impulse, Warp, Has ship, Shields up, Docked, Docking |
 
 ## Installation
@@ -82,7 +82,15 @@ curl -X POST http://HOST:PORT/exec.lua -H "Content-Type: text/plain; charset=utf
 # Reputation (first active player ship)
 curl -X POST http://HOST:PORT/exec.lua -H "Content-Type: text/plain; charset=utf-8" \
   -d "local s=getPlayerShip(-1); if not s then return '' end; return tostring(s:getReputationPoints() or 0)"
+
+# Victory faction (winner when game over; should return empty/nil when game is running)
+curl -X POST http://HOST:PORT/exec.lua -H "Content-Type: text/plain; charset=utf-8" \
+  -d "local g=gameGlobalInfo; if g then return tostring(g:getVictoryFaction() or '') end; return ''"
 ```
+
+## Orphaned entities
+
+If you previously had the **Active scenario** sensor and it now shows "Unavailable", remove it manually: **Settings** → **Devices & services** → EmptyEpsilon → **Entities** → select the orphaned entity → **Delete**.
 
 ## Debugging
 
