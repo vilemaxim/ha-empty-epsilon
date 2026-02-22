@@ -137,12 +137,11 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                         remote_path = f"{remote_scripts}/{scenario}"
                         if await ssh.upload_file(local_file, remote_path):
                             _LOGGER.info("start_server: uploaded scenario %s to %s", scenario, remote_path)
-                deploy_ok = await ssh.deploy_hardware_ini(universe=sacn_universe)
-                _LOGGER.info("start_server: deploy_hardware_ini=%s", deploy_ok)
                 ok = await ssh.start_server(
                     install_path, ee_port, scenario,
                     headless_name=headless_name,
                     headless_internet=headless_internet,
+                    sacn_universe=sacn_universe,
                 )
                 _LOGGER.info("start_server: start_server result=%s", ok)
                 if ok:

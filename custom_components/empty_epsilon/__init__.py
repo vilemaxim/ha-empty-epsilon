@@ -83,30 +83,24 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         headless_internet = data.get(CONF_HEADLESS_INTERNET, False)
         scenario = data.get(CONF_SCENARIO, DEFAULT_INIT_SCENARIO)
 
-        deploy_ok = await ssh.deploy_hardware_ini(universe=sacn_universe)
-        if not deploy_ok:
-            _LOGGER.warning(
-                "Failed to deploy hardware.ini to %s - check SSH and logs. Will retry on next HA restart.",
-                data.get(CONF_SSH_HOST),
+        start_ok = await ssh.start_server(
+            install_path, ee_port, scenario,
+            headless_name=headless_name,
+            headless_internet=headless_internet,
+            sacn_universe=sacn_universe,
+        )
+        if start_ok:
+            _LOGGER.info("Waiting %ds for EmptyEpsilon to boot", EE_STARTUP_DELAY)
+            await asyncio.sleep(EE_STARTUP_DELAY)
+            hass.config_entries.async_update_entry(
+                config_entry,
+                options={**options, OPTION_HAS_AUTO_STARTED: True},
             )
         else:
-            start_ok = await ssh.start_server(
-                install_path, ee_port, scenario,
-                headless_name=headless_name,
-                headless_internet=headless_internet,
+            _LOGGER.warning(
+                "EmptyEpsilon failed to start on %s - check EE install path and logs. Will retry on next HA restart.",
+                data.get(CONF_SSH_HOST),
             )
-            if start_ok:
-                _LOGGER.info("Waiting %ds for EmptyEpsilon to boot", EE_STARTUP_DELAY)
-                await asyncio.sleep(EE_STARTUP_DELAY)
-                hass.config_entries.async_update_entry(
-                    config_entry,
-                    options={**options, OPTION_HAS_AUTO_STARTED: True},
-                )
-            else:
-                _LOGGER.warning(
-                    "EmptyEpsilon failed to start on %s - check EE install path and logs. Will retry on next HA restart.",
-                    data.get(CONF_SSH_HOST),
-                )
         await ssh.disconnect()
 
     # Remove orphaned Active scenario entity (no EE API to get scenario name)

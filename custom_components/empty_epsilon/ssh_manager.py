@@ -219,11 +219,12 @@ class SSHManager:
         scenario: str = DEFAULT_INIT_SCENARIO,
         headless_name: str = "EmptyEpsilon",
         headless_internet: bool = False,
+        sacn_universe: int = DEFAULT_SACN_UNIVERSE,
     ) -> bool:
         """
         Start EmptyEpsilon headless with httpserver on the EE host via SSH.
-        Skips if already running. Uses login shell.
-        All actions and EE output go to /tmp/emptyepsilon_integration.log on the EE server.
+        Deploys hardware.ini and options.ini before launching. Skips if already running.
+        Uses login shell. All actions go to /tmp/emptyepsilon_integration.log on the EE server.
         Returns True if the server is running (existing or newly started).
         """
         await self._log_remote("start_server", "checking if EmptyEpsilon already running")
@@ -240,9 +241,9 @@ class SSHManager:
             await self._log_remote("start_server", "skipped - already running")
             return True
 
-        base = ee_install_path.rstrip("/")
-        ee_bin = base if base.endswith("EmptyEpsilon") else f"{base}/EmptyEpsilon"
-        # Deploy options.ini so EE reads headless config (name, internet, etc.)
+        # Deploy config files before launching EE
+        if not await self.deploy_hardware_ini(universe=sacn_universe):
+            _LOGGER.warning("Failed to deploy hardware.ini, continuing with options.ini")
         await self.deploy_options_ini(
             scenario=scenario,
             ee_port=ee_port,
