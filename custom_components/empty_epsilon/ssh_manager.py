@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-import io
 import logging
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -174,22 +174,17 @@ class SSHManager:
         remote_path: str,
         timeout: float = 30.0,
     ) -> bool:
-        """Upload a file to the remote host via SFTP. Reads file in thread to avoid blocking."""
+        """Upload a file to the remote host via SFTP."""
         if not self._conn:
             if not await self.connect():
                 return False
         try:
-            # Read file in thread - avoids blocking open() in event loop
-            content = await asyncio.wait_for(
-                asyncio.to_thread(local_path.read_bytes),
-                timeout=timeout,
-            )
             sftp = await asyncio.wait_for(
                 self._conn.start_sftp_client(),
                 timeout=timeout,
             )
             await asyncio.wait_for(
-                sftp.put(io.BytesIO(content), remote_path),
+                sftp.put(str(local_path), remote_path),
                 timeout=timeout,
             )
             return True
@@ -203,24 +198,30 @@ class SSHManager:
         remote_path: str,
         timeout: float = 30.0,
     ) -> bool:
-        """Upload string content to a remote file (e.g. hardware.ini). Uses BytesIO to avoid blocking file I/O."""
+        """Upload string content to a remote file (e.g. hardware.ini)."""
         if not self._conn:
             if not await self.connect():
                 return False
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".ini", delete=False, encoding="utf-8"
+        ) as f:
+            f.write(content)
+            local_path = f.name
         try:
             sftp = await asyncio.wait_for(
                 self._conn.start_sftp_client(),
                 timeout=timeout,
             )
-            content_bytes = content.encode("utf-8")
             await asyncio.wait_for(
-                sftp.put(io.BytesIO(content_bytes), remote_path),
+                sftp.put(local_path, remote_path),
                 timeout=timeout,
             )
             return True
         except Exception as e:
-            _LOGGER.warning("SFTP upload failed for %s: %s", remote_path, e)
+            _LOGGER.warning("SFTP upload failed: %s", e)
             return False
+        finally:
+            Path(local_path).unlink(missing_ok=True)
 
     async def start_server(
         self,
