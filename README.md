@@ -7,6 +7,7 @@ A custom Home Assistant integration for [Empty Epsilon](https://daid.github.io/E
 - **Real-time game state** via sACN/E1.31 (~20 Hz): hull, shields, energy, alerts, system health
 - **HTTP API** for commands and supplementary data: pause, spawn, scenario time, callsigns
 - **Server management** via SSH: start/stop EE, upload scenarios, deploy sACN config
+- **Scenario Media Source**: Browse and upload .lua scenarios in **Media** → **Empty Epsilon scenarios**
 - **Start paused** by default — use the Pause switch or `unpauseGame()` to begin
 
 ## Sensor data sources
@@ -87,6 +88,14 @@ curl -X POST http://HOST:PORT/exec.lua -H "Content-Type: text/plain; charset=utf
 curl -X POST http://HOST:PORT/exec.lua -H "Content-Type: text/plain; charset=utf-8" \
   -d "local g=gameGlobalInfo; if g then return tostring(g:getVictoryFaction() or '') end; return ''"
 ```
+
+## Scenarios
+
+The integration adds **Empty Epsilon scenarios** as a Media source. Go to **Media** in the sidebar to browse and upload `.lua` scenario files.
+
+- **Browse**: **Media** → **Empty Epsilon scenarios** — shows `.lua` files in `/config/empty_epsilon/scenarios/`
+- **Upload**: Use the API (requires admin): `POST /api/empty_epsilon/scenarios/upload` with `file` field, or add files via Samba/File Editor to `/config/empty_epsilon/scenarios/`
+- **Start with scenario**: Call `empty_epsilon.start_server` with `scenario: "my_scenario.lua"`. If the file exists locally, it will be uploaded to the EE server before starting.
 
 ## Debugging
 

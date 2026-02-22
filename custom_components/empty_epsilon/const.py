@@ -23,6 +23,7 @@ CONF_SSH_SKIP_HOST_KEY_CHECK = "ssh_skip_host_key_check"
 
 # Paths for generated files (under /config)
 EE_CONFIG_DIR = "empty_epsilon"
+EE_SCENARIOS_DIR = "scenarios"
 EE_KEY_PATH = f"/config/{EE_CONFIG_DIR}/id_rsa"
 EE_PUBKEY_PATH = f"/config/{EE_CONFIG_DIR}/ee_ssh_public_key.pub"
 EE_KNOWN_HOSTS_PATH = f"/config/{EE_CONFIG_DIR}/known_hosts"

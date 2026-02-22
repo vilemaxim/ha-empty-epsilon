@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 import voluptuous as vol
@@ -27,6 +28,8 @@ from .const import (
     CONF_SSH_USERNAME,
     DEFAULT_INIT_SCENARIO,
     DOMAIN,
+    EE_CONFIG_DIR,
+    EE_SCENARIOS_DIR,
 )
 from .ssh_manager import SSHManager
 
@@ -122,6 +125,18 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 cfg.get(CONF_SSH_HOST), install_path, ee_port, scenario,
             )
             try:
+                await ssh.connect()
+                # Upload scenario from Media folder if it exists locally
+                local_scenarios = Path(hass.config.config_dir, EE_CONFIG_DIR, EE_SCENARIOS_DIR)
+                local_file = local_scenarios / scenario
+                if local_file.exists() and local_file.is_file():
+                    status, out, _ = await ssh.run_command("echo $HOME", timeout=5.0)
+                    if status == 0 and out.strip():
+                        remote_scripts = f"{out.strip()}/.emptyepsilon/scripts"
+                        await ssh.run_command(f"mkdir -p {remote_scripts}", timeout=5.0)
+                        remote_path = f"{remote_scripts}/{scenario}"
+                        if await ssh.upload_file(local_file, remote_path):
+                            _LOGGER.info("start_server: uploaded scenario %s to %s", scenario, remote_path)
                 deploy_ok = await ssh.deploy_hardware_ini(universe=sacn_universe)
                 _LOGGER.info("start_server: deploy_hardware_ini=%s", deploy_ok)
                 ok = await ssh.start_server(

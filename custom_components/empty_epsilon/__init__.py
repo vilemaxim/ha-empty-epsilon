@@ -44,6 +44,10 @@ OPTION_HAS_AUTO_STARTED = "has_auto_started_once"
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the EmptyEpsilon integration (no YAML)."""
+    from .media_source import ScenarioFileView, UploadScenarioView
+
+    hass.http.register_view(ScenarioFileView())
+    hass.http.register_view(UploadScenarioView())
     return True
 
 
@@ -75,22 +79,35 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         install_path = data.get(CONF_EE_INSTALL_PATH, "/usr/local/bin")
         ee_port = data.get(CONF_EE_PORT, 8080)
         sacn_universe = data.get(CONF_SACN_UNIVERSE, 2)
-        await ssh.deploy_hardware_ini(universe=sacn_universe)
         headless_name = data.get(CONF_HEADLESS_NAME, "EmptyEpsilon")
         headless_internet = data.get(CONF_HEADLESS_INTERNET, False)
         scenario = data.get(CONF_SCENARIO, DEFAULT_INIT_SCENARIO)
-        if await ssh.start_server(
-            install_path, ee_port, scenario,
-            headless_name=headless_name,
-            headless_internet=headless_internet,
-        ):
-            _LOGGER.info("Waiting %ds for EmptyEpsilon to boot", EE_STARTUP_DELAY)
-            await asyncio.sleep(EE_STARTUP_DELAY)
+
+        deploy_ok = await ssh.deploy_hardware_ini(universe=sacn_universe)
+        if not deploy_ok:
+            _LOGGER.warning(
+                "Failed to deploy hardware.ini to %s - check SSH and logs. Will retry on next HA restart.",
+                data.get(CONF_SSH_HOST),
+            )
+        else:
+            start_ok = await ssh.start_server(
+                install_path, ee_port, scenario,
+                headless_name=headless_name,
+                headless_internet=headless_internet,
+            )
+            if start_ok:
+                _LOGGER.info("Waiting %ds for EmptyEpsilon to boot", EE_STARTUP_DELAY)
+                await asyncio.sleep(EE_STARTUP_DELAY)
+                hass.config_entries.async_update_entry(
+                    config_entry,
+                    options={**options, OPTION_HAS_AUTO_STARTED: True},
+                )
+            else:
+                _LOGGER.warning(
+                    "EmptyEpsilon failed to start on %s - check EE install path and logs. Will retry on next HA restart.",
+                    data.get(CONF_SSH_HOST),
+                )
         await ssh.disconnect()
-        hass.config_entries.async_update_entry(
-            config_entry,
-            options={**options, OPTION_HAS_AUTO_STARTED: True},
-        )
 
     # Remove orphaned Active scenario entity (no EE API to get scenario name)
     entity_reg = er.async_get(hass)

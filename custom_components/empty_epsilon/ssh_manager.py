@@ -168,6 +168,30 @@ class SSHManager:
             timeout=5.0,
         )
 
+    async def upload_file(
+        self,
+        local_path: Path,
+        remote_path: str,
+        timeout: float = 30.0,
+    ) -> bool:
+        """Upload a file to the remote host via SFTP."""
+        if not self._conn:
+            if not await self.connect():
+                return False
+        try:
+            sftp = await asyncio.wait_for(
+                self._conn.start_sftp_client(),
+                timeout=timeout,
+            )
+            await asyncio.wait_for(
+                sftp.put(str(local_path), remote_path),
+                timeout=timeout,
+            )
+            return True
+        except Exception as e:
+            _LOGGER.warning("SFTP upload failed: %s", e)
+            return False
+
     async def upload_string(
         self,
         content: str,
@@ -184,18 +208,7 @@ class SSHManager:
             f.write(content)
             local_path = f.name
         try:
-            sftp = await asyncio.wait_for(
-                self._conn.start_sftp_client(),
-                timeout=timeout,
-            )
-            await asyncio.wait_for(
-                sftp.put(local_path, remote_path),
-                timeout=timeout,
-            )
-            return True
-        except Exception as e:
-            _LOGGER.warning("SFTP upload failed: %s", e)
-            return False
+            return await self.upload_file(Path(local_path), remote_path, timeout)
         finally:
             Path(local_path).unlink(missing_ok=True)
 
