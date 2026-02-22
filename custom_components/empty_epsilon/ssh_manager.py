@@ -168,30 +168,6 @@ class SSHManager:
             timeout=5.0,
         )
 
-    async def upload_file(
-        self,
-        local_path: Path,
-        remote_path: str,
-        timeout: float = 30.0,
-    ) -> bool:
-        """Upload a file to the remote host via SFTP."""
-        if not self._conn:
-            if not await self.connect():
-                return False
-        try:
-            sftp = await asyncio.wait_for(
-                self._conn.start_sftp_client(),
-                timeout=timeout,
-            )
-            await asyncio.wait_for(
-                sftp.put(str(local_path), remote_path),
-                timeout=timeout,
-            )
-            return True
-        except Exception as e:
-            _LOGGER.warning("SFTP upload failed for %s: %s", remote_path, e)
-            return False
-
     async def upload_string(
         self,
         content: str,
@@ -230,12 +206,11 @@ class SSHManager:
         scenario: str = DEFAULT_INIT_SCENARIO,
         headless_name: str = "EmptyEpsilon",
         headless_internet: bool = False,
-        sacn_universe: int = DEFAULT_SACN_UNIVERSE,
     ) -> bool:
         """
         Start EmptyEpsilon headless with httpserver on the EE host via SSH.
-        Deploys hardware.ini and options.ini before launching. Skips if already running.
-        Uses login shell. All actions go to /tmp/emptyepsilon_integration.log on the EE server.
+        Skips if already running. Uses login shell.
+        All actions and EE output go to /tmp/emptyepsilon_integration.log on the EE server.
         Returns True if the server is running (existing or newly started).
         """
         await self._log_remote("start_server", "checking if EmptyEpsilon already running")
@@ -252,9 +227,9 @@ class SSHManager:
             await self._log_remote("start_server", "skipped - already running")
             return True
 
-        # Deploy config files before launching EE
-        if not await self.deploy_hardware_ini(universe=sacn_universe):
-            _LOGGER.warning("Failed to deploy hardware.ini, continuing with options.ini")
+        base = ee_install_path.rstrip("/")
+        ee_bin = base if base.endswith("EmptyEpsilon") else f"{base}/EmptyEpsilon"
+        # Deploy options.ini so EE reads headless config (name, internet, etc.)
         await self.deploy_options_ini(
             scenario=scenario,
             ee_port=ee_port,
